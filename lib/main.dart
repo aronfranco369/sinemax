@@ -1,28 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'core/config/env.dart';
-import 'core/theme/kitabu_theme.dart';
-import 'core/router/app_router.dart';
+import 'app.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
-  await Supabase.initialize(
-    url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF0A1628),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
   );
-  runApp(const ProviderScope(child: KitabuApp()));
-}
-
-class KitabuApp extends StatelessWidget {
-  const KitabuApp({super.key});
-
-  @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        title: 'Kitabu',
-        theme: KitabuTheme.normal(),
-        routerConfig: appRouter,
-      );
+  runApp(const ProviderScope(child: SinemaxApp()));
 }

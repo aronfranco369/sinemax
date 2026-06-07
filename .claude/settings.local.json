@@ -5,7 +5,8 @@
       "Bash(flutter analyze *)",
       "Bash(Remove-Item -Recurse -Force \"d:/Projects/books/kitabu/supabase\")",
       "Bash(flutter pub *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(git add *)"
     ]
   }
 }
