@@ -49,6 +49,7 @@ _MediaFile _$MediaFileFromJson(Map<String, dynamic> json) => _MediaFile(
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
+  episodeNumber: (json['episode_number'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$MediaFileToJson(_MediaFile instance) =>
@@ -59,4 +60,5 @@ Map<String, dynamic> _$MediaFileToJson(_MediaFile instance) =>
       'label': instance.label,
       'download_url': instance.downloadUrl,
       'created_at': instance.createdAt?.toIso8601String(),
+      'episode_number': instance.episodeNumber,
     };

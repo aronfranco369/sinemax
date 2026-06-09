@@ -45,6 +45,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     try {
       final files = await ref.read(mediaFilesProvider(widget.contentId).future);
       final url = (files.isNotEmpty && files.first.downloadUrl != null) ? files.first.downloadUrl! : _kFallbackUrl;
+      debugPrint('[Sinemax] Playing URL: $url');
       await _initPlayer(url);
       // TODO: [DO NOT TOUCH] After player initializes, increment view_count on Supabase for widget.contentId.
       // Use: supabase.rpc('increment_view_count', params: {'media_id': widget.contentId}) or a direct UPDATE.
@@ -69,6 +70,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     _cc = null;
     _vpc = null;
     final url = (file.downloadUrl != null && file.downloadUrl!.isNotEmpty) ? file.downloadUrl! : _kFallbackUrl;
+    debugPrint('[Sinemax] Playing URL: $url');
     await _initPlayer(url);
     // TODO: [DO NOT TOUCH] After new file's player initializes, restore saved position for 'index'
     // from Hive key '${widget.contentId}_$index'. Seek _vpc to saved Duration.
@@ -128,8 +130,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     final topPad = MediaQuery.of(context).padding.top;
 
     final files = filesAsync.value ?? [];
-    final hasFiles = media.isSeries && files.isNotEmpty;
-    final isFilesLoading = media.isSeries && filesAsync.isLoading;
+    final hasFiles = files.isNotEmpty && (media.isSeries || files.length > 1);
+    final isFilesLoading = filesAsync.isLoading;
 
     return Scaffold(
       backgroundColor: SinemaxColors.bg,
@@ -253,7 +255,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                       titleSpacing: 0,
                       actions: const [],
                       title: _EpisodesHeader(
-                        count: '${files.length} episode${files.length == 1 ? '' : 's'}',
+                        label: media.isSeries ? 'EPISODES' : 'PARTS',
+                        count: '${files.length} ${media.isSeries ? (files.length == 1 ? 'episode' : 'episodes') : (files.length == 1 ? 'part' : 'parts')}',
                         expanded: _episodesExpanded,
                         onToggle: () => setState(() => _episodesExpanded = !_episodesExpanded),
                       ),
@@ -304,11 +307,12 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
 // ── Episodes header ───────────────────────────────────────────────────────────
 
 class _EpisodesHeader extends StatelessWidget {
+  final String label;
   final String count;
   final bool expanded;
   final VoidCallback onToggle;
 
-  const _EpisodesHeader({required this.count, required this.expanded, required this.onToggle});
+  const _EpisodesHeader({required this.label, required this.count, required this.expanded, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +320,7 @@ class _EpisodesHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Text('EPISODES', style: SinemaxTextStyles.display(16, weight: FontWeight.w700)),
+          Text(label, style: SinemaxTextStyles.display(16, weight: FontWeight.w700)),
           const SizedBox(width: 8),
           Text(count, style: SinemaxTextStyles.body(13, color: SinemaxColors.muted)),
           const Spacer(),
@@ -360,7 +364,7 @@ class _FileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = file.label ?? 'Episode ${index + 1}';
+    final label = file.label ?? 'Episode ${file.episodeNumber ?? index + 1}';
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -451,7 +455,7 @@ class _FileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = file.label ?? 'Episode ${index + 1}';
+    final label = file.label ?? 'Episode ${file.episodeNumber ?? index + 1}';
 
     return GestureDetector(
       onTap: onTap,

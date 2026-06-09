@@ -211,7 +211,7 @@ final class MediaFilesProvider
   }
 }
 
-String _$mediaFilesHash() => r'1eeed17a029fb307a8c594379be221b7162c9a77';
+String _$mediaFilesHash() => r'e9bda10179fddc8b981782c2e186cf6010dbf3cb';
 
 final class MediaFilesFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<MediaFile>>, String> {

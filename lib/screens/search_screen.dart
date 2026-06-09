@@ -18,18 +18,23 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  SearchQuery? _searchNotifier;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _searchNotifier = ref.read(searchQueryProvider.notifier);
+      _focusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
-    ref.read(searchQueryProvider.notifier).clear();
+    Future(() => _searchNotifier?.clear());
     super.dispose();
   }
 

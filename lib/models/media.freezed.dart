@@ -323,7 +323,7 @@ as int,
 /// @nodoc
 mixin _$MediaFile {
 
- String get id;@JsonKey(name: 'media_id') String get mediaId; int? get season; String? get label;@JsonKey(name: 'download_url') String? get downloadUrl;@JsonKey(name: 'created_at') DateTime? get createdAt;
+ String get id;@JsonKey(name: 'media_id') String get mediaId; int? get season; String? get label;@JsonKey(name: 'download_url') String? get downloadUrl;@JsonKey(name: 'created_at') DateTime? get createdAt;@JsonKey(name: 'episode_number') int? get episodeNumber;
 /// Create a copy of MediaFile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -336,16 +336,16 @@ $MediaFileCopyWith<MediaFile> get copyWith => _$MediaFileCopyWithImpl<MediaFile>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaFile&&(identical(other.id, id) || other.id == id)&&(identical(other.mediaId, mediaId) || other.mediaId == mediaId)&&(identical(other.season, season) || other.season == season)&&(identical(other.label, label) || other.label == label)&&(identical(other.downloadUrl, downloadUrl) || other.downloadUrl == downloadUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MediaFile&&(identical(other.id, id) || other.id == id)&&(identical(other.mediaId, mediaId) || other.mediaId == mediaId)&&(identical(other.season, season) || other.season == season)&&(identical(other.label, label) || other.label == label)&&(identical(other.downloadUrl, downloadUrl) || other.downloadUrl == downloadUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.episodeNumber, episodeNumber) || other.episodeNumber == episodeNumber));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,mediaId,season,label,downloadUrl,createdAt);
+int get hashCode => Object.hash(runtimeType,id,mediaId,season,label,downloadUrl,createdAt,episodeNumber);
 
 @override
 String toString() {
-  return 'MediaFile(id: $id, mediaId: $mediaId, season: $season, label: $label, downloadUrl: $downloadUrl, createdAt: $createdAt)';
+  return 'MediaFile(id: $id, mediaId: $mediaId, season: $season, label: $label, downloadUrl: $downloadUrl, createdAt: $createdAt, episodeNumber: $episodeNumber)';
 }
 
 
@@ -356,7 +356,7 @@ abstract mixin class $MediaFileCopyWith<$Res>  {
   factory $MediaFileCopyWith(MediaFile value, $Res Function(MediaFile) _then) = _$MediaFileCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'media_id') String mediaId, int? season, String? label,@JsonKey(name: 'download_url') String? downloadUrl,@JsonKey(name: 'created_at') DateTime? createdAt
+ String id,@JsonKey(name: 'media_id') String mediaId, int? season, String? label,@JsonKey(name: 'download_url') String? downloadUrl,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'episode_number') int? episodeNumber
 });
 
 
@@ -373,7 +373,7 @@ class _$MediaFileCopyWithImpl<$Res>
 
 /// Create a copy of MediaFile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? mediaId = null,Object? season = freezed,Object? label = freezed,Object? downloadUrl = freezed,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? mediaId = null,Object? season = freezed,Object? label = freezed,Object? downloadUrl = freezed,Object? createdAt = freezed,Object? episodeNumber = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,mediaId: null == mediaId ? _self.mediaId : mediaId // ignore: cast_nullable_to_non_nullable
@@ -381,7 +381,8 @@ as String,season: freezed == season ? _self.season : season // ignore: cast_null
 as int?,label: freezed == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String?,downloadUrl: freezed == downloadUrl ? _self.downloadUrl : downloadUrl // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,episodeNumber: freezed == episodeNumber ? _self.episodeNumber : episodeNumber // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -466,10 +467,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'media_id')  String mediaId,  int? season,  String? label, @JsonKey(name: 'download_url')  String? downloadUrl, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'media_id')  String mediaId,  int? season,  String? label, @JsonKey(name: 'download_url')  String? downloadUrl, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'episode_number')  int? episodeNumber)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MediaFile() when $default != null:
-return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUrl,_that.createdAt);case _:
+return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUrl,_that.createdAt,_that.episodeNumber);case _:
   return orElse();
 
 }
@@ -487,10 +488,10 @@ return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUr
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'media_id')  String mediaId,  int? season,  String? label, @JsonKey(name: 'download_url')  String? downloadUrl, @JsonKey(name: 'created_at')  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'media_id')  String mediaId,  int? season,  String? label, @JsonKey(name: 'download_url')  String? downloadUrl, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'episode_number')  int? episodeNumber)  $default,) {final _that = this;
 switch (_that) {
 case _MediaFile():
-return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUrl,_that.createdAt);case _:
+return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUrl,_that.createdAt,_that.episodeNumber);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -507,10 +508,10 @@ return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUr
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'media_id')  String mediaId,  int? season,  String? label, @JsonKey(name: 'download_url')  String? downloadUrl, @JsonKey(name: 'created_at')  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'media_id')  String mediaId,  int? season,  String? label, @JsonKey(name: 'download_url')  String? downloadUrl, @JsonKey(name: 'created_at')  DateTime? createdAt, @JsonKey(name: 'episode_number')  int? episodeNumber)?  $default,) {final _that = this;
 switch (_that) {
 case _MediaFile() when $default != null:
-return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUrl,_that.createdAt);case _:
+return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUrl,_that.createdAt,_that.episodeNumber);case _:
   return null;
 
 }
@@ -522,7 +523,7 @@ return $default(_that.id,_that.mediaId,_that.season,_that.label,_that.downloadUr
 @JsonSerializable()
 
 class _MediaFile implements MediaFile {
-  const _MediaFile({required this.id, @JsonKey(name: 'media_id') required this.mediaId, this.season, this.label, @JsonKey(name: 'download_url') this.downloadUrl, @JsonKey(name: 'created_at') this.createdAt});
+  const _MediaFile({required this.id, @JsonKey(name: 'media_id') required this.mediaId, this.season, this.label, @JsonKey(name: 'download_url') this.downloadUrl, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'episode_number') this.episodeNumber});
   factory _MediaFile.fromJson(Map<String, dynamic> json) => _$MediaFileFromJson(json);
 
 @override final  String id;
@@ -531,6 +532,7 @@ class _MediaFile implements MediaFile {
 @override final  String? label;
 @override@JsonKey(name: 'download_url') final  String? downloadUrl;
 @override@JsonKey(name: 'created_at') final  DateTime? createdAt;
+@override@JsonKey(name: 'episode_number') final  int? episodeNumber;
 
 /// Create a copy of MediaFile
 /// with the given fields replaced by the non-null parameter values.
@@ -545,16 +547,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaFile&&(identical(other.id, id) || other.id == id)&&(identical(other.mediaId, mediaId) || other.mediaId == mediaId)&&(identical(other.season, season) || other.season == season)&&(identical(other.label, label) || other.label == label)&&(identical(other.downloadUrl, downloadUrl) || other.downloadUrl == downloadUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MediaFile&&(identical(other.id, id) || other.id == id)&&(identical(other.mediaId, mediaId) || other.mediaId == mediaId)&&(identical(other.season, season) || other.season == season)&&(identical(other.label, label) || other.label == label)&&(identical(other.downloadUrl, downloadUrl) || other.downloadUrl == downloadUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.episodeNumber, episodeNumber) || other.episodeNumber == episodeNumber));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,mediaId,season,label,downloadUrl,createdAt);
+int get hashCode => Object.hash(runtimeType,id,mediaId,season,label,downloadUrl,createdAt,episodeNumber);
 
 @override
 String toString() {
-  return 'MediaFile(id: $id, mediaId: $mediaId, season: $season, label: $label, downloadUrl: $downloadUrl, createdAt: $createdAt)';
+  return 'MediaFile(id: $id, mediaId: $mediaId, season: $season, label: $label, downloadUrl: $downloadUrl, createdAt: $createdAt, episodeNumber: $episodeNumber)';
 }
 
 
@@ -565,7 +567,7 @@ abstract mixin class _$MediaFileCopyWith<$Res> implements $MediaFileCopyWith<$Re
   factory _$MediaFileCopyWith(_MediaFile value, $Res Function(_MediaFile) _then) = __$MediaFileCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'media_id') String mediaId, int? season, String? label,@JsonKey(name: 'download_url') String? downloadUrl,@JsonKey(name: 'created_at') DateTime? createdAt
+ String id,@JsonKey(name: 'media_id') String mediaId, int? season, String? label,@JsonKey(name: 'download_url') String? downloadUrl,@JsonKey(name: 'created_at') DateTime? createdAt,@JsonKey(name: 'episode_number') int? episodeNumber
 });
 
 
@@ -582,7 +584,7 @@ class __$MediaFileCopyWithImpl<$Res>
 
 /// Create a copy of MediaFile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? mediaId = null,Object? season = freezed,Object? label = freezed,Object? downloadUrl = freezed,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? mediaId = null,Object? season = freezed,Object? label = freezed,Object? downloadUrl = freezed,Object? createdAt = freezed,Object? episodeNumber = freezed,}) {
   return _then(_MediaFile(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,mediaId: null == mediaId ? _self.mediaId : mediaId // ignore: cast_nullable_to_non_nullable
@@ -590,7 +592,8 @@ as String,season: freezed == season ? _self.season : season // ignore: cast_null
 as int?,label: freezed == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
 as String?,downloadUrl: freezed == downloadUrl ? _self.downloadUrl : downloadUrl // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,episodeNumber: freezed == episodeNumber ? _self.episodeNumber : episodeNumber // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

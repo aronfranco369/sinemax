@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/providers.dart';
+import '../models/discover_filter.dart';
 import '../models/media.dart';
 import '../theme/app_theme.dart';
 import '../widgets/home_skeleton.dart';
@@ -77,16 +78,23 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _HomeRow extends StatelessWidget {
+class _HomeRow extends ConsumerWidget {
   final HomeRow row;
   const _HomeRow({required this.row});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: row.title, onSeeAll: () => context.go('/discover')),
+        SectionHeader(
+          title: row.title,
+          onSeeAll: () {
+            final (country, type) = _parseRowId(row.id);
+            ref.read(discoverFiltersProvider.notifier).preset(DiscoverFilter(country: country, type: type));
+            context.go('/discover');
+          },
+        ),
         SizedBox(
           height: 202,
           child: ListView.separated(
@@ -100,6 +108,13 @@ class _HomeRow extends StatelessWidget {
       ],
     );
   }
+}
+
+(String, String) _parseRowId(String id) {
+  final parts = id.split('-');
+  final type = parts.last == 'series' ? 'Series' : 'Movie';
+  final country = parts.sublist(0, parts.length - 1).map((p) => p.isEmpty ? p : '${p[0].toUpperCase()}${p.substring(1)}').join(' ');
+  return (country, type);
 }
 
 // ─── Trending Carousel ────────────────────────────────────────────────────────

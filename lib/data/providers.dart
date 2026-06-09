@@ -7,6 +7,7 @@ import '../models/discover_filter.dart';
 import '../models/library_item.dart';
 import '../models/media.dart';
 import '../models/request.dart';
+import '../utils/row_labels.dart';
 
 part 'providers.g.dart';
 
@@ -40,13 +41,17 @@ Future<List<HomeRow>> homeRows(Ref ref) async {
     final key = '${country.toUpperCase()} ${m.isSeries ? 'SERIES' : 'MOVIES'}';
     groups.putIfAbsent(key, () => []).add(m);
   }
-  return (groups.entries.where((e) => e.value.length >= 2).map((e) => HomeRow(id: e.key.toLowerCase().replaceAll(' ', '-'), title: e.key, items: e.value)).toList()
+  return (groups.entries.where((e) => e.value.length >= 2).map((e) {
+    final lookupKey = e.key.toLowerCase();
+    final title = (kRowLabels[lookupKey]?.isNotEmpty == true) ? kRowLabels[lookupKey]! : e.key;
+    return HomeRow(id: e.key.toLowerCase().replaceAll(' ', '-'), title: title, items: e.value);
+  }).toList()
     ..sort((a, b) => b.items.length.compareTo(a.items.length)));
 }
 
 @riverpod
 Future<List<MediaFile>> mediaFiles(Ref ref, String mediaId) async {
-  final data = await _db.from('files').select().eq('media_id', mediaId).order('season').order('created_at');
+  final data = await _db.from('files').select().eq('media_id', mediaId).order('episode_number', ascending: true, nullsFirst: false).order('label', ascending: true, nullsFirst: false);
   return (data as List).map((row) => MediaFile.fromJson(row as Map<String, dynamic>)).toList();
 }
 
@@ -103,6 +108,7 @@ class DiscoverFilters extends _$DiscoverFilters {
   void setCountry(String v) => state = state.copyWith(country: v);
   void setType(String v) => state = state.copyWith(type: v);
   void reset() => state = const DiscoverFilter();
+  void preset(DiscoverFilter f) => state = f;
 }
 
 @riverpod

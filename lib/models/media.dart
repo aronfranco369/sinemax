@@ -41,6 +41,7 @@ abstract class MediaFile with _$MediaFile {
     String? label,
     @JsonKey(name: 'download_url') String? downloadUrl,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'episode_number') int? episodeNumber,
   }) = _MediaFile;
 
   factory MediaFile.fromJson(Map<String, dynamic> json) => _$MediaFileFromJson(json);
