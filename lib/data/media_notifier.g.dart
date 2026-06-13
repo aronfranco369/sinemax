@@ -33,7 +33,7 @@ final class MediaNotifierProvider
   MediaNotifier create() => MediaNotifier();
 }
 
-String _$mediaNotifierHash() => r'5a933ae93291269edb097cbc7f5811273b4f1a2f';
+String _$mediaNotifierHash() => r'e9ce58845daa498c2c79e76e55583fb0d26a7f21';
 
 abstract class _$MediaNotifier extends $AsyncNotifier<List<Media>> {
   FutureOr<List<Media>> build();

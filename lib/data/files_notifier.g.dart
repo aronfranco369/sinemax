@@ -33,7 +33,7 @@ final class FilesNotifierProvider
   FilesNotifier create() => FilesNotifier();
 }
 
-String _$filesNotifierHash() => r'a053121a8ac72198837385f1aa2f745b34894f12';
+String _$filesNotifierHash() => r'aa304870af692713e83818f4df312339a6809802';
 
 abstract class _$FilesNotifier extends $AsyncNotifier<List<MediaFile>> {
   FutureOr<List<MediaFile>> build();

@@ -58,7 +58,7 @@ final class MediaByIdProvider
   }
 }
 
-String _$mediaByIdHash() => r'f4f6f795ecddf4f4911e90958c2bf1db50fc54b7';
+String _$mediaByIdHash() => r'b06fc6b8073f18889758f8793db2dd1077f01700';
 
 final class MediaByIdFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Media?>, String> {
@@ -115,7 +115,7 @@ final class HomeRowsProvider
   }
 }
 
-String _$homeRowsHash() => r'3951d2ef782d64ab2b9847d4a411c0d4a7bf69b1';
+String _$homeRowsHash() => r'65fa47e66b0d283b94bd3634f7a8dd207f55cd4f';
 
 /// Files for a specific media — reads from Hive via FilesNotifier.
 /// Triggers a background Supabase fetch on first access for this mediaId.
@@ -180,7 +180,7 @@ final class MediaFilesProvider
   }
 }
 
-String _$mediaFilesHash() => r'bdcb9d0a29dc670e1bcfab8abf0c44e0302a30da';
+String _$mediaFilesHash() => r'05d954ce950f216b77f35c6a9b60797640eb805c';
 
 /// Files for a specific media — reads from Hive via FilesNotifier.
 /// Triggers a background Supabase fetch on first access for this mediaId.
@@ -261,7 +261,7 @@ final class RelatedMediaProvider
   }
 }
 
-String _$relatedMediaHash() => r'c8693c66220808594197234e4ec66e1c93ea71cf';
+String _$relatedMediaHash() => r'88edfbb2657115d303f0114f91b0420873f45d6f';
 
 final class RelatedMediaFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<List<Media>>, String> {
@@ -318,7 +318,7 @@ final class FilterYearsProvider
   }
 }
 
-String _$filterYearsHash() => r'069fd4f40602b7fa8cb1fc2194c3e9fb6b4670ad';
+String _$filterYearsHash() => r'a207cc24970f9dfe74e984867105e4f8162ca39e';
 
 @ProviderFor(filterDjs)
 final filterDjsProvider = FilterDjsProvider._();
@@ -357,7 +357,7 @@ final class FilterDjsProvider
   }
 }
 
-String _$filterDjsHash() => r'8181b3209bf9e65833bc649a197975879ed58d5f';
+String _$filterDjsHash() => r'3066b61b74e8c3bcd82b6ae52802c784048e1ff3';
 
 @ProviderFor(filterCountries)
 final filterCountriesProvider = FilterCountriesProvider._();
@@ -396,7 +396,7 @@ final class FilterCountriesProvider
   }
 }
 
-String _$filterCountriesHash() => r'36d5c29170b4d9bbe96f84e50d77cd3f3e69eb2d';
+String _$filterCountriesHash() => r'df2443e3ad7a0aa277de20f495ea54f0b4ebd2fc';
 
 @ProviderFor(DiscoverFilters)
 final discoverFiltersProvider = DiscoverFiltersProvider._();
@@ -487,7 +487,7 @@ final class DiscoverResultsProvider
   }
 }
 
-String _$discoverResultsHash() => r'7e81b8077c926ccdfa83cdd65a4999e51954a6e4';
+String _$discoverResultsHash() => r'1d8937c580cff4ed346cf6809e5abdfe2e7a18ea';
 
 @ProviderFor(SearchQuery)
 final searchQueryProvider = SearchQueryProvider._();
@@ -540,6 +540,69 @@ abstract class _$SearchQuery extends $Notifier<String> {
   }
 }
 
+/// Title to pre-fill the request form with, set when a user is forwarded from a
+/// no-result search. Consumed (and cleared) by [RequestsScreen].
+
+@ProviderFor(PendingRequestTitle)
+final pendingRequestTitleProvider = PendingRequestTitleProvider._();
+
+/// Title to pre-fill the request form with, set when a user is forwarded from a
+/// no-result search. Consumed (and cleared) by [RequestsScreen].
+final class PendingRequestTitleProvider
+    extends $NotifierProvider<PendingRequestTitle, String?> {
+  /// Title to pre-fill the request form with, set when a user is forwarded from a
+  /// no-result search. Consumed (and cleared) by [RequestsScreen].
+  PendingRequestTitleProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pendingRequestTitleProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pendingRequestTitleHash();
+
+  @$internal
+  @override
+  PendingRequestTitle create() => PendingRequestTitle();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$pendingRequestTitleHash() =>
+    r'ed81f0d18396f97f2f4da8bbfb3a70c4f9f81422';
+
+/// Title to pre-fill the request form with, set when a user is forwarded from a
+/// no-result search. Consumed (and cleared) by [RequestsScreen].
+
+abstract class _$PendingRequestTitle extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(searchResults)
 final searchResultsProvider = SearchResultsProvider._();
 
@@ -577,7 +640,171 @@ final class SearchResultsProvider
   }
 }
 
-String _$searchResultsHash() => r'0055a8ec593a45932df0b47e1bbf3bd89fa52eeb';
+String _$searchResultsHash() => r'2a20290c6c35f50369ab28019e691b0d5280161f';
+
+/// Recently searched query strings, most-recent first. Backed by Hive box
+/// `recent_searches` under key `terms`. Powers the chip row on the search screen.
+
+@ProviderFor(RecentSearchTerms)
+final recentSearchTermsProvider = RecentSearchTermsProvider._();
+
+/// Recently searched query strings, most-recent first. Backed by Hive box
+/// `recent_searches` under key `terms`. Powers the chip row on the search screen.
+final class RecentSearchTermsProvider
+    extends $NotifierProvider<RecentSearchTerms, List<String>> {
+  /// Recently searched query strings, most-recent first. Backed by Hive box
+  /// `recent_searches` under key `terms`. Powers the chip row on the search screen.
+  RecentSearchTermsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'recentSearchTermsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$recentSearchTermsHash();
+
+  @$internal
+  @override
+  RecentSearchTerms create() => RecentSearchTerms();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<String>>(value),
+    );
+  }
+}
+
+String _$recentSearchTermsHash() => r'f23da296fa396deeb9c63d8f67f5ea16baac6e97';
+
+/// Recently searched query strings, most-recent first. Backed by Hive box
+/// `recent_searches` under key `terms`. Powers the chip row on the search screen.
+
+abstract class _$RecentSearchTerms extends $Notifier<List<String>> {
+  List<String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<List<String>, List<String>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<List<String>, List<String>>,
+              List<String>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Media IDs the user opened from search results, most-recent first. Backed by
+/// Hive box `recent_searches` under key `media`.
+
+@ProviderFor(RecentSearchMedia)
+final recentSearchMediaProvider = RecentSearchMediaProvider._();
+
+/// Media IDs the user opened from search results, most-recent first. Backed by
+/// Hive box `recent_searches` under key `media`.
+final class RecentSearchMediaProvider
+    extends $NotifierProvider<RecentSearchMedia, List<String>> {
+  /// Media IDs the user opened from search results, most-recent first. Backed by
+  /// Hive box `recent_searches` under key `media`.
+  RecentSearchMediaProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'recentSearchMediaProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$recentSearchMediaHash();
+
+  @$internal
+  @override
+  RecentSearchMedia create() => RecentSearchMedia();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<String>>(value),
+    );
+  }
+}
+
+String _$recentSearchMediaHash() => r'2dc45624428f5c1970c49d2647505c0baa4ed350';
+
+/// Media IDs the user opened from search results, most-recent first. Backed by
+/// Hive box `recent_searches` under key `media`.
+
+abstract class _$RecentSearchMedia extends $Notifier<List<String>> {
+  List<String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<List<String>, List<String>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<List<String>, List<String>>,
+              List<String>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+@ProviderFor(recentSearchContent)
+final recentSearchContentProvider = RecentSearchContentProvider._();
+
+final class RecentSearchContentProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<Media>>,
+          List<Media>,
+          FutureOr<List<Media>>
+        >
+    with $FutureModifier<List<Media>>, $FutureProvider<List<Media>> {
+  RecentSearchContentProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'recentSearchContentProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$recentSearchContentHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<Media>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<Media>> create(Ref ref) {
+    return recentSearchContent(ref);
+  }
+}
+
+String _$recentSearchContentHash() =>
+    r'bc18293d447741e8772b4129ed60622ed3341d33';
 
 @ProviderFor(Saved)
 final savedProvider = SavedProvider._();
@@ -667,7 +894,7 @@ final class SavedContentProvider
   }
 }
 
-String _$savedContentHash() => r'ed2dd00d30e96b614e3b4e5142468a92377ddd50';
+String _$savedContentHash() => r'5ca0bd3931ed4b16662264c77efd37f1f534b6ca';
 
 @ProviderFor(Recent)
 final recentProvider = RecentProvider._();
@@ -760,106 +987,60 @@ final class RecentContentProvider
   }
 }
 
-String _$recentContentHash() => r'98ee8eaaa5e9f9bacb83f5bf482440a504d3e716';
+String _$recentContentHash() => r'df66d4489f5003be8113f85256afddfcfe07d6ee';
 
-@ProviderFor(Downloads)
-final downloadsProvider = DownloadsProvider._();
+/// Distinct DJ names pulled from the cached media catalog (Hive). Used to power
+/// the DJ autocomplete in the Agiza (requests) screen.
 
-final class DownloadsProvider
-    extends $NotifierProvider<Downloads, List<DownloadItem>> {
-  DownloadsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'downloadsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+@ProviderFor(djNames)
+final djNamesProvider = DjNamesProvider._();
 
-  @override
-  String debugGetCreateSourceHash() => _$downloadsHash();
+/// Distinct DJ names pulled from the cached media catalog (Hive). Used to power
+/// the DJ autocomplete in the Agiza (requests) screen.
 
-  @$internal
-  @override
-  Downloads create() => Downloads();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<DownloadItem> value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<List<DownloadItem>>(value),
-    );
-  }
-}
-
-String _$downloadsHash() => r'8d07a15c9e3ee9d96ea219a9296740af4e2c2c1e';
-
-abstract class _$Downloads extends $Notifier<List<DownloadItem>> {
-  List<DownloadItem> build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<List<DownloadItem>, List<DownloadItem>>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<List<DownloadItem>, List<DownloadItem>>,
-              List<DownloadItem>,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
-@ProviderFor(downloadsContent)
-final downloadsContentProvider = DownloadsContentProvider._();
-
-final class DownloadsContentProvider
+final class DjNamesProvider
     extends
         $FunctionalProvider<
-          AsyncValue<List<(DownloadItem, Media)>>,
-          List<(DownloadItem, Media)>,
-          FutureOr<List<(DownloadItem, Media)>>
+          AsyncValue<List<String>>,
+          List<String>,
+          FutureOr<List<String>>
         >
-    with
-        $FutureModifier<List<(DownloadItem, Media)>>,
-        $FutureProvider<List<(DownloadItem, Media)>> {
-  DownloadsContentProvider._()
+    with $FutureModifier<List<String>>, $FutureProvider<List<String>> {
+  /// Distinct DJ names pulled from the cached media catalog (Hive). Used to power
+  /// the DJ autocomplete in the Agiza (requests) screen.
+  DjNamesProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'downloadsContentProvider',
+        name: r'djNamesProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$downloadsContentHash();
+  String debugGetCreateSourceHash() => _$djNamesHash();
 
   @$internal
   @override
-  $FutureProviderElement<List<(DownloadItem, Media)>> $createElement(
+  $FutureProviderElement<List<String>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<List<(DownloadItem, Media)>> create(Ref ref) {
-    return downloadsContent(ref);
+  FutureOr<List<String>> create(Ref ref) {
+    return djNames(ref);
   }
 }
 
-String _$downloadsContentHash() => r'1f6c513eee5039ac3f03f5bb8a90089f7ce102b0';
+String _$djNamesHash() => r'0ec01c6c885b93977e304a410f750abffa593b71';
 
 @ProviderFor(Requests)
 final requestsProvider = RequestsProvider._();
 
 final class RequestsProvider
-    extends $NotifierProvider<Requests, List<ContentRequest>> {
+    extends $AsyncNotifierProvider<Requests, List<ContentRequest>> {
   RequestsProvider._()
     : super(
         from: null,
@@ -877,29 +1058,26 @@ final class RequestsProvider
   @$internal
   @override
   Requests create() => Requests();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<ContentRequest> value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<List<ContentRequest>>(value),
-    );
-  }
 }
 
-String _$requestsHash() => r'6372b4f4888abdd5ebdf91ac84a1ad7a2c8864cc';
+String _$requestsHash() => r'1ab413efc3db74fff37d7e6a17dbc9f8fa83265a';
 
-abstract class _$Requests extends $Notifier<List<ContentRequest>> {
-  List<ContentRequest> build();
+abstract class _$Requests extends $AsyncNotifier<List<ContentRequest>> {
+  FutureOr<List<ContentRequest>> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<List<ContentRequest>, List<ContentRequest>>;
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<List<ContentRequest>>, List<ContentRequest>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<List<ContentRequest>, List<ContentRequest>>,
-              List<ContentRequest>,
+              AnyNotifier<
+                AsyncValue<List<ContentRequest>>,
+                List<ContentRequest>
+              >,
+              AsyncValue<List<ContentRequest>>,
               Object?,
               Object?
             >;

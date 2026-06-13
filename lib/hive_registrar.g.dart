@@ -8,7 +8,7 @@ import 'package:kitabu/models/media.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
-    registerAdapter(DownloadItemAdapter());
+    registerAdapter(DownloadRecordAdapter());
     registerAdapter(MediaFileHiveAdapter());
     registerAdapter(MediaHiveAdapter());
     registerAdapter(WatchedItemAdapter());
@@ -17,7 +17,7 @@ extension HiveRegistrar on HiveInterface {
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
-    registerAdapter(DownloadItemAdapter());
+    registerAdapter(DownloadRecordAdapter());
     registerAdapter(MediaFileHiveAdapter());
     registerAdapter(MediaHiveAdapter());
     registerAdapter(WatchedItemAdapter());

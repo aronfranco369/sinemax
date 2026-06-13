@@ -29,13 +29,15 @@ class MediaHiveAdapter extends TypeAdapter<_Media> {
       dj: fields[9] as String?,
       viewCount: fields[10] == null ? 0 : (fields[10] as num).toInt(),
       downloadCount: fields[11] == null ? 0 : (fields[11] as num).toInt(),
+      createdAt: fields[12] as DateTime?,
+      updatedAt: fields[13] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, _Media obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +61,11 @@ class MediaHiveAdapter extends TypeAdapter<_Media> {
       ..writeByte(10)
       ..write(obj.viewCount)
       ..writeByte(11)
-      ..write(obj.downloadCount);
+      ..write(obj.downloadCount)
+      ..writeByte(12)
+      ..write(obj.createdAt)
+      ..writeByte(13)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -90,13 +96,16 @@ class MediaFileHiveAdapter extends TypeAdapter<_MediaFile> {
       label: fields[3] as String?,
       downloadUrl: fields[4] as String?,
       episodeNumber: (fields[5] as num?)?.toInt(),
+      createdAt: fields[6] as DateTime?,
+      updatedAt: fields[7] as DateTime?,
+      fileSize: (fields[8] as num?)?.toInt(),
     );
   }
 
   @override
   void write(BinaryWriter writer, _MediaFile obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -108,7 +117,13 @@ class MediaFileHiveAdapter extends TypeAdapter<_MediaFile> {
       ..writeByte(4)
       ..write(obj.downloadUrl)
       ..writeByte(5)
-      ..write(obj.episodeNumber);
+      ..write(obj.episodeNumber)
+      ..writeByte(6)
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.updatedAt)
+      ..writeByte(8)
+      ..write(obj.fileSize);
   }
 
   @override
@@ -143,6 +158,12 @@ _Media _$MediaFromJson(Map<String, dynamic> json) => _Media(
   dj: json['dj'] as String?,
   viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
   downloadCount: (json['download_count'] as num?)?.toInt() ?? 0,
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+  updatedAt: json['updated_at'] == null
+      ? null
+      : DateTime.parse(json['updated_at'] as String),
 );
 
 Map<String, dynamic> _$MediaToJson(_Media instance) => <String, dynamic>{
@@ -158,6 +179,8 @@ Map<String, dynamic> _$MediaToJson(_Media instance) => <String, dynamic>{
   'dj': instance.dj,
   'view_count': instance.viewCount,
   'download_count': instance.downloadCount,
+  'created_at': instance.createdAt?.toIso8601String(),
+  'updated_at': instance.updatedAt?.toIso8601String(),
 };
 
 _MediaFile _$MediaFileFromJson(Map<String, dynamic> json) => _MediaFile(
@@ -166,10 +189,14 @@ _MediaFile _$MediaFileFromJson(Map<String, dynamic> json) => _MediaFile(
   season: (json['season'] as num?)?.toInt(),
   label: json['label'] as String?,
   downloadUrl: json['download_url'] as String?,
+  episodeNumber: (json['episode_number'] as num?)?.toInt(),
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
-  episodeNumber: (json['episode_number'] as num?)?.toInt(),
+  updatedAt: json['updated_at'] == null
+      ? null
+      : DateTime.parse(json['updated_at'] as String),
+  fileSize: (json['file_size'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$MediaFileToJson(_MediaFile instance) =>
@@ -179,6 +206,8 @@ Map<String, dynamic> _$MediaFileToJson(_MediaFile instance) =>
       'season': instance.season,
       'label': instance.label,
       'download_url': instance.downloadUrl,
-      'created_at': instance.createdAt?.toIso8601String(),
       'episode_number': instance.episodeNumber,
+      'created_at': instance.createdAt?.toIso8601String(),
+      'updated_at': instance.updatedAt?.toIso8601String(),
+      'file_size': instance.fileSize,
     };

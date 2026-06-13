@@ -12,6 +12,7 @@ import 'screens/detail_screen.dart';
 import 'screens/search_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'widgets/offline_banner.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/splash',
@@ -50,7 +51,14 @@ class SinemaxApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(title: 'SINEMAX', debugShowCheckedModeBanner: false, theme: buildSinemaxTheme(), routerConfig: appRouter);
+    return MaterialApp.router(
+      title: 'SINEMAX',
+      debugShowCheckedModeBanner: false,
+      theme: buildSinemaxTheme(),
+      routerConfig: appRouter,
+      // Global offline banner — overlays every route, never blocks the UI.
+      builder: (context, child) => ConnectivityOverlay(child: child!),
+    );
   }
 }
 

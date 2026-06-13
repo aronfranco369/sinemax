@@ -26,6 +26,8 @@ abstract class Media with _$Media {
     @HiveField(9) String? dj,
     @HiveField(10) @JsonKey(name: 'view_count') @Default(0) int viewCount,
     @HiveField(11) @JsonKey(name: 'download_count') @Default(0) int downloadCount,
+    @HiveField(12) @JsonKey(name: 'created_at') DateTime? createdAt,
+    @HiveField(13) @JsonKey(name: 'updated_at') DateTime? updatedAt,
   }) = _Media;
 
   factory Media.fromJson(Map<String, dynamic> json) => _$MediaFromJson(json);
@@ -38,6 +40,8 @@ abstract class Media with _$Media {
 
 @freezed
 abstract class MediaFile with _$MediaFile {
+  const MediaFile._();
+
   @HiveType(typeId: 3, adapterName: 'MediaFileHiveAdapter')
   const factory MediaFile({
     @HiveField(0) required String id,
@@ -45,11 +49,22 @@ abstract class MediaFile with _$MediaFile {
     @HiveField(2) int? season,
     @HiveField(3) String? label,
     @HiveField(4) @JsonKey(name: 'download_url') String? downloadUrl,
-    @JsonKey(name: 'created_at') DateTime? createdAt,
     @HiveField(5) @JsonKey(name: 'episode_number') int? episodeNumber,
+    @HiveField(6) @JsonKey(name: 'created_at') DateTime? createdAt,
+    @HiveField(7) @JsonKey(name: 'updated_at') DateTime? updatedAt,
+    @HiveField(8) @JsonKey(name: 'file_size') int? fileSize,
   }) = _MediaFile;
 
   factory MediaFile.fromJson(Map<String, dynamic> json) => _$MediaFileFromJson(json);
+
+  /// File size (stored in bytes) formatted as megabytes for display,
+  /// e.g. `"720 MB"`. Empty string when the size is unknown or zero.
+  String get sizeDisplay {
+    final bytes = fileSize;
+    if (bytes == null || bytes <= 0) return '';
+    final mb = bytes / (1024 * 1024);
+    return '${mb.toStringAsFixed(mb >= 100 ? 0 : 1)} MB';
+  }
 }
 
 class HomeRow {

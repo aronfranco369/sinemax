@@ -5,6 +5,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:readmore/readmore.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/providers.dart';
@@ -12,12 +13,12 @@ import '../models/media.dart';
 import '../theme/app_theme.dart';
 import '../widgets/action_btn.dart';
 import '../widgets/detail_skeleton.dart';
+import '../widgets/download_controls.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/offline_banner.dart';
 import '../widgets/player_loading_view.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/sinemax_icon.dart';
-
-const _kFallbackUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
 class DetailScreen extends ConsumerStatefulWidget {
   final String contentId;
@@ -31,6 +32,12 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   VideoPlayerController? _vpc;
   ChewieController? _cc;
   bool _playerReady = false;
+  bool _playerFailed = false;
+  // Non-null when playback failed for a reason other than connectivity
+  // (bad codec, server rejection, …) — shown in the player slot.
+  String? _playerError;
+  // Last URL handed to the player — logged alongside any player error.
+  String? _currentUrl;
   bool _episodesExpanded = false;
   int _activeFileIndex = 0;
 
@@ -44,16 +51,42 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     if (!mounted) return;
     try {
       final files = await ref.read(mediaFilesProvider(widget.contentId).future);
-      final url = (files.isNotEmpty && files.first.downloadUrl != null) ? files.first.downloadUrl! : _kFallbackUrl;
+      if (files.isNotEmpty) debugPrint('[Sinemax] Playing file size: ${files.first.fileSize} bytes (${files.first.sizeDisplay})');
+      final url = files.isNotEmpty ? await _resolvePlayUrl(files.first) : null;
+      if (url == null) {
+        _showPlayerError('Video hii bado haijapatikana');
+        return;
+      }
       debugPrint('[Sinemax] Playing URL: $url');
       await _initPlayer(url);
       // TODO: [DO NOT TOUCH] After player initializes, increment view_count on Supabase for widget.contentId.
       // Use: supabase.rpc('increment_view_count', params: {'media_id': widget.contentId}) or a direct UPDATE.
       // TODO: [DO NOT TOUCH] After player initializes, restore saved playback position for the first file
       // from Hive (box: 'watch_progress', key: '${widget.contentId}_0'). Seek _vpc to saved Duration.
-    } catch (_) {
-      await _initPlayer(_kFallbackUrl);
+    } catch (e, st) {
+      await _handlePlayerError(e, st);
     }
+  }
+
+  /// Decides whether a playback failure is a connectivity problem or a real
+  /// player error. Offline → offline notice; online → friendly "couldn't play"
+  /// notice with a retry button (covers transient server errors, e.g. 403).
+  Future<void> _handlePlayerError(Object e, StackTrace st) async {
+    debugPrint('[Sinemax] Player error on URL: $_currentUrl');
+    debugPrint('[Sinemax] Player error: $e\n$st');
+    if (!mounted) return;
+    final online = await ref.read(connectionStatusProvider.notifier).recheck();
+    _showPlayerError(online ? 'Imeshindwa kucheza video. Jaribu tena baadaye.' : null);
+  }
+
+  /// Shows the in-player error slot. A null [message] renders the offline
+  /// notice; a non-null one renders the generic playback-failure notice.
+  void _showPlayerError(String? message) {
+    if (!mounted) return;
+    setState(() {
+      _playerFailed = true;
+      _playerError = message;
+    });
   }
 
   Future<void> _switchToFile(MediaFile file, int index) async {
@@ -62,20 +95,40 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     // Key: '${widget.contentId}_$_activeFileIndex', value: _vpc?.value.position (Duration → microseconds).
     setState(() {
       _playerReady = false;
+      _playerFailed = false;
+      _playerError = null;
       _activeFileIndex = index;
     });
     _cc?.dispose();
     _vpc?.dispose();
     _cc = null;
     _vpc = null;
-    final url = (file.downloadUrl != null && file.downloadUrl!.isNotEmpty) ? file.downloadUrl! : _kFallbackUrl;
-    debugPrint('[Sinemax] Playing URL: $url');
-    await _initPlayer(url);
+    try {
+      final url = await _resolvePlayUrl(file);
+      if (url == null) {
+        _showPlayerError('Video hii bado haijapatikana');
+        return;
+      }
+      debugPrint('[Sinemax] Playing URL: $url');
+      await _initPlayer(url);
+    } catch (e, st) {
+      await _handlePlayerError(e, st);
+    }
     // TODO: [DO NOT TOUCH] After new file's player initializes, restore saved position for 'index'
     // from Hive key '${widget.contentId}_$index'. Seek _vpc to saved Duration.
   }
 
+  /// Prefer the encrypted offline copy (streamed via the loopback decrypting
+  /// server) over the remote Backblaze URL.
+  Future<String?> _resolvePlayUrl(MediaFile file) async {
+    final local = await DownloadEngine.instance.playbackUrl(file.id);
+    if (local != null) return local;
+    return (file.downloadUrl != null && file.downloadUrl!.isNotEmpty) ? file.downloadUrl : null;
+  }
+
   Future<void> _initPlayer(String url) async {
+    _currentUrl = url;
+    debugPrint('[Sinemax] NOW PLAYING URL: $url');
     _vpc = VideoPlayerController.networkUrl(Uri.parse(url));
     await _vpc!.initialize();
     _cc = ChewieController(
@@ -95,6 +148,26 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     _cc?.dispose();
     _vpc?.dispose();
     super.dispose();
+  }
+
+  // Collapsible description via readmore: collapsed clamps to 2 lines ending
+  // with "… Soma zaidi"; tapping expands to full text with "Funga".
+  Widget _buildDescription(String text) {
+    final style = SinemaxTextStyles.body(14, color: SinemaxColors.muted);
+    final linkStyle = SinemaxTextStyles.body(14, weight: FontWeight.w600, color: SinemaxColors.blue);
+
+    return ReadMoreText(
+      text,
+      trimMode: TrimMode.Line,
+      trimLines: 3,
+      style: style,
+      colorClickableText: SinemaxColors.blue,
+      delimiter: ' ',
+      trimCollapsedText: '… Soma zaidi',
+      trimExpandedText: '  Funga',
+      moreStyle: linkStyle,
+      lessStyle: linkStyle,
+    );
   }
 
   @override
@@ -141,7 +214,26 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
             children: [
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: _playerReady && _cc != null ? Chewie(controller: _cc!) : PlayerLoadingView(posterUrl: media.posterUrl),
+                child: _playerReady && _cc != null
+                    ? Chewie(controller: _cc!)
+                    : _playerFailed
+                    ? ColoredBox(
+                        color: SinemaxColors.panel,
+                        child: OfflineNotice(
+                          compact: true,
+                          icon: _playerError == null ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+                          title: _playerError == null ? 'Unganisha intaneti kuonesha hii video' : 'Imeshindwa kucheza video',
+                          message: _playerError ?? '',
+                          onRetry: () {
+                            setState(() {
+                              _playerFailed = false;
+                              _playerError = null;
+                            });
+                            _loadAndInitPlayer();
+                          },
+                        ),
+                      )
+                    : PlayerLoadingView(posterUrl: media.posterUrl),
               ),
               Positioned(
                 top: topPad + 8,
@@ -187,7 +279,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: ActionBtn(icon: 'download', label: 'Download', onTap: () => ref.read(downloadsProvider.notifier).add(media.id)),
+                  child: DownloadActionBtn(media: media, file: files.isNotEmpty ? files[_activeFileIndex.clamp(0, files.length - 1)] : null),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -225,12 +317,12 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                               if (media.year != null) InfoChip(label: '${media.year}'),
                               if (media.countryDisplay.isNotEmpty) InfoChip(label: media.countryDisplay),
                               if (media.genreDisplay.isNotEmpty) InfoChip(label: media.genreDisplay),
+                              // Single-file movie (no parts): show its size here, since
+                              // there's no episode/part list to attach it to.
+                              if (!hasFiles && !media.isSeries && files.length == 1 && files.first.sizeDisplay.isNotEmpty) InfoChip(label: files.first.sizeDisplay),
                             ],
                           ),
-                          if (media.description != null && media.description!.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            Text(media.description!, style: SinemaxTextStyles.body(14, color: SinemaxColors.muted)),
-                          ],
+                          if (media.description != null && media.description!.isNotEmpty) ...[const SizedBox(height: 10), _buildDescription(media.description!)],
                           const SizedBox(height: 20),
                         ],
                       ),
@@ -283,7 +375,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                   if (hasFiles && _episodesExpanded) ...[
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, i) => _FileRow(file: files[i], index: i, posterUrl: media.posterUrl, isActive: i == _activeFileIndex, onTap: () => _switchToFile(files[i], i)),
+                        (context, i) => _FileRow(file: files[i], media: media, index: i, posterUrl: media.posterUrl, isActive: i == _activeFileIndex, onTap: () => _switchToFile(files[i], i)),
                         childCount: files.length,
                       ),
                     ),
@@ -445,11 +537,12 @@ class _FileCard extends StatelessWidget {
 
 class _FileRow extends StatelessWidget {
   final MediaFile file;
+  final Media media;
   final int index;
   final String? posterUrl;
   final bool isActive;
   final VoidCallback? onTap;
-  const _FileRow({required this.file, required this.index, this.posterUrl, this.isActive = false, this.onTap});
+  const _FileRow({required this.file, required this.media, required this.index, this.posterUrl, this.isActive = false, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -521,12 +614,18 @@ class _FileRow extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (file.season != null) Text('Season ${file.season}', style: SinemaxTextStyles.body(11, color: SinemaxColors.muted2)),
+                          Builder(
+                            builder: (_) {
+                              final parts = [if (file.season != null) 'Season ${file.season}', if (file.sizeDisplay.isNotEmpty) file.sizeDisplay];
+                              if (parts.isEmpty) return const SizedBox.shrink();
+                              return Text(parts.join('  ·  '), style: SinemaxTextStyles.body(11, color: SinemaxColors.muted2));
+                            },
+                          ),
                         ],
                       ),
                     ),
-                    // download icon
-                    const SinemaxIcon('download', size: 15, color: SinemaxColors.muted2),
+                    // download control — idle / progress ring / done
+                    FileDownloadIcon(media: media, file: file),
                     const SizedBox(width: 12),
                     // play circle — filled when active
                     Container(

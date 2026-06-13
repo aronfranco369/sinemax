@@ -19,22 +19,62 @@ class WatchedItem {
   WatchedItem({required this.contentId, required this.watchedAt, this.progress = 0.0, this.context = ''});
 }
 
-@HiveType(typeId: 1)
-class DownloadItem {
+/// Lifecycle of an offline download. Stored as [DownloadRecord.status] index —
+/// do not reorder members.
+enum DownloadStatus { queued, running, paused, encrypting, completed, failed }
+
+@HiveType(typeId: 4)
+class DownloadRecord {
+  /// MediaFile id — also used as the background_downloader taskId.
   @HiveField(0)
-  final String contentId;
+  final String fileId;
 
   @HiveField(1)
-  final String quality;
+  final String mediaId;
 
+  /// Episode/part label shown in lists (e.g. "Episode 1").
   @HiveField(2)
-  final String size;
+  final String label;
 
+  /// Media title, kept here so notifications/library rows work offline.
   @HiveField(3)
+  final String title;
+
+  /// Original Backblaze download URL — needed to retry failed downloads.
+  @HiveField(4)
+  final String url;
+
+  /// DownloadStatus.index
+  @HiveField(5)
+  int status;
+
+  /// 0.0 → 1.0 while downloading.
+  @HiveField(6)
+  double progress;
+
+  /// Plaintext size in bytes (expected while downloading, exact once complete).
+  @HiveField(7)
+  int totalBytes;
+
+  @HiveField(8)
   final String at;
 
-  @HiveField(4)
-  final String context;
+  DownloadRecord({
+    required this.fileId,
+    required this.mediaId,
+    required this.label,
+    required this.title,
+    required this.url,
+    this.status = 0,
+    this.progress = 0.0,
+    this.totalBytes = 0,
+    required this.at,
+  });
 
-  DownloadItem({required this.contentId, this.quality = 'HD', this.size = '—', required this.at, this.context = ''});
+  DownloadStatus get statusEnum => DownloadStatus.values[status];
+  bool get isCompleted => statusEnum == DownloadStatus.completed;
+  bool get isActive =>
+      statusEnum == DownloadStatus.queued ||
+      statusEnum == DownloadStatus.running ||
+      statusEnum == DownloadStatus.encrypting;
 }

@@ -10,6 +10,7 @@ import '../models/discover_filter.dart';
 import '../models/media.dart';
 import '../theme/app_theme.dart';
 import '../widgets/home_skeleton.dart';
+import '../widgets/offline_banner.dart';
 import '../widgets/poster_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/sinemax_search_bar.dart';
@@ -61,14 +62,25 @@ class HomeScreen extends ConsumerWidget {
             error: (e, _) => [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Center(
-                    child: Text('Failed to load content', style: SinemaxTextStyles.body(15, color: SinemaxColors.muted)),
-                  ),
+                  padding: const EdgeInsets.only(top: 48),
+                  child: OfflineNotice(onRetry: () => ref.invalidate(mediaProvider)),
                 ),
               ),
             ],
-            data: (rows) => rows.map((row) => SliverToBoxAdapter(child: _HomeRow(row: row))).toList(),
+            data: (rows) => rows.isEmpty
+                // First launch with no internet — nothing cached yet.
+                ? [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 48),
+                        child: OfflineNotice(
+                          message: 'Connect to the internet to load the catalog for the first time.',
+                          onRetry: () => ref.invalidate(mediaProvider),
+                        ),
+                      ),
+                    ),
+                  ]
+                : rows.map((row) => SliverToBoxAdapter(child: _HomeRow(row: row))).toList(),
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),

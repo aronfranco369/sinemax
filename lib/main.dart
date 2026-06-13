@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/adapters.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
+import 'data/download_engine.dart';
 import 'models/library_item.dart';
 import 'models/media.dart';
 
@@ -23,18 +24,22 @@ Future<void> main() async {
 
   await Hive.initFlutter();
   Hive.registerAdapter(WatchedItemAdapter());
-  Hive.registerAdapter(DownloadItemAdapter());
+  Hive.registerAdapter(DownloadRecordAdapter());
   Hive.registerAdapter(MediaHiveAdapter());
   Hive.registerAdapter(MediaFileHiveAdapter());
   await Future.wait([
     Hive.openBox<bool>('saved'),
     Hive.openBox<WatchedItem>('recent'),
-    Hive.openBox<DownloadItem>('downloads'),
+    Hive.openBox<DownloadRecord>('download_records'),
     Hive.openBox<Media>('media_cache'),
     Hive.openBox<MediaFile>('files_cache'),
     Hive.openBox<bool>('files_fetched'),
     Hive.openBox<String>('metadata'),
+    Hive.openBox<String>('recent_searches'),
   ]);
+
+  // Offline downloads: notifications, task tracking, AES key, reconcile state.
+  await DownloadEngine.instance.init();
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(

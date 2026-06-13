@@ -19,6 +19,7 @@ const _paths = <String, String>{
   'play': 'M5 3l14 9-14 9V3z',
   'pause': 'M6 4h3v16H6V4zm9 0h3v16h-3V4z',
   'download': 'M12 3v13m0 0l-4-4m4 4l4-4M3 20h18',
+  'download-filled': 'M11 3h2v7h3l-4 5-4-5h3z M4 18h16v2H4z',
   'star': 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   'chevR': 'M9 18l6-6-6-6',
   'chevD': 'M6 9l6 6 6-6',
@@ -49,7 +50,7 @@ const _paths = <String, String>{
 
 // Whether an icon should be rendered filled (solid) vs stroked outline.
 // Only the five nav icons have meaningful filled variants.
-const _filledIcons = {'home-filled', 'compass-filled', 'inbox-filled', 'bookmark-filled', 'user-filled'};
+const _filledIcons = {'home-filled', 'compass-filled', 'inbox-filled', 'bookmark-filled', 'download-filled', 'user-filled'};
 
 class SinemaxIcon extends StatelessWidget {
   final String name;

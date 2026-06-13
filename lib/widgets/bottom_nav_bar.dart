@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'sinemax_icon.dart';
 
-const _navItems = [(label: 'Home', icon: 'home'), (label: 'Discover', icon: 'compass'), (label: 'Requests', icon: 'inbox'), (label: 'Library', icon: 'bookmark'), (label: 'Profile', icon: 'user')];
+const _navItems = [(label: 'Home', icon: 'home'), (label: 'Discover', icon: 'compass'), (label: 'Requests', icon: 'inbox'), (label: 'Downloads', icon: 'download'), (label: 'Profile', icon: 'user')];
 
 class SinemaxBottomNav extends StatelessWidget {
   final int currentIndex;

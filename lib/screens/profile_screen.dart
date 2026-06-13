@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:kitabu/screens/logo_animation.dart';
 
 import '../data/providers.dart';
+import '../models/media.dart';
 import '../theme/app_theme.dart';
 import '../widgets/sinemax_icon.dart';
 
@@ -12,9 +15,14 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final watched = ref.watch(recentProvider).length;
     final saved = ref.watch(savedProvider).length;
-    final downloaded = ref.watch(downloadsProvider).length;
+    final downloaded = ref.watch(downloadsProvider).values.where((r) => r.isCompleted).length;
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnimatedSvgLogo())),
+        backgroundColor: SinemaxColors.blue,
+        child: const Icon(Icons.edit, color: Colors.white),
+      ),
       backgroundColor: SinemaxColors.bg,
       body: CustomScrollView(
         slivers: [
@@ -54,6 +62,7 @@ class ProfileScreen extends ConsumerWidget {
               const _SettingsTile(icon: 'globe', label: 'Language', value: 'English'),
               const _SettingsTile(icon: 'info', label: 'About Sinemax'),
               const _SettingsTile(icon: 'help', label: 'Help & Support'),
+              const _RefreshDataTile(),
               const _LogoutTile(),
             ]),
           ),
@@ -285,6 +294,68 @@ class _ToggleState extends State<_Toggle> {
             height: 16,
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RefreshDataTile extends ConsumerStatefulWidget {
+  const _RefreshDataTile();
+
+  @override
+  ConsumerState<_RefreshDataTile> createState() => _RefreshDataTileState();
+}
+
+class _RefreshDataTileState extends ConsumerState<_RefreshDataTile> {
+  bool _busy = false;
+
+  Future<void> _refresh() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      // Wipe the Supabase cache boxes so the notifiers re-pull everything.
+      // Clearing `metadata` resets the sync watermarks, forcing a full fetch.
+      await Future.wait([Hive.box<Media>('media_cache').clear(), Hive.box<MediaFile>('files_cache').clear(), Hive.box<bool>('files_fetched').clear(), Hive.box<String>('metadata').clear()]);
+
+      // Rebuild the notifiers — with empty boxes they fetch fresh from the DB.
+      ref.invalidate(mediaProvider);
+      ref.invalidate(filesProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Library data refreshed from server')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Refresh failed: $e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _refresh,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: SinemaxColors.panel,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: SinemaxColors.line, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            const SinemaxIcon('quality', size: 20, color: SinemaxColors.blue),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text('Refresh Library Data', style: SinemaxTextStyles.body(14, color: SinemaxColors.blue)),
+            ),
+            if (_busy)
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(SinemaxColors.blue)))
+            else
+              const SinemaxIcon('chevR', size: 18, color: SinemaxColors.muted2),
+          ],
         ),
       ),
     );

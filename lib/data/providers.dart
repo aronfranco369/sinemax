@@ -1,15 +1,22 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/discover_filter.dart';
 import '../models/library_item.dart';
 import '../models/media.dart';
 import '../models/request.dart';
 import '../utils/row_labels.dart';
+import 'connectivity_notifier.dart';
 import 'files_notifier.dart';
 import 'media_notifier.dart';
 
+export 'download_engine.dart' show DownloadEngine;
+export 'downloads_notifier.dart' show downloadsProvider, downloadsContentProvider, Downloads;
+export 'connectivity_notifier.dart' show connectionStatusProvider, ConnectionStatus;
 export 'files_notifier.dart' show filesProvider, FilesNotifier;
 export 'media_notifier.dart' show mediaProvider, MediaNotifier;
 
@@ -55,6 +62,9 @@ Future<List<HomeRow>> homeRows(Ref ref) async {
 /// Triggers a background Supabase fetch on first access for this mediaId.
 @riverpod
 Future<List<MediaFile>> mediaFiles(Ref ref, String mediaId) async {
+  // Re-run on connectivity changes so an offline-failed lazy fetch retries
+  // automatically once internet is back.
+  ref.watch(connectionStatusProvider);
   // Fire-and-forget: fetch from Supabase if this mediaId isn't cached yet
   Future.microtask(() => ref.read(filesProvider.notifier).ensureLoaded(mediaId));
   // Watch the full files box; re-runs automatically when new files are added
@@ -160,6 +170,16 @@ class SearchQuery extends _$SearchQuery {
   void clear() => state = '';
 }
 
+/// Title to pre-fill the request form with, set when a user is forwarded from a
+/// no-result search. Consumed (and cleared) by [RequestsScreen].
+@riverpod
+class PendingRequestTitle extends _$PendingRequestTitle {
+  @override
+  String? build() => null;
+  void set(String title) => state = title;
+  void clear() => state = null;
+}
+
 @riverpod
 Future<List<Media>> searchResults(Ref ref) async {
   final q = ref.watch(searchQueryProvider).trim().toLowerCase();
@@ -171,6 +191,76 @@ Future<List<Media>> searchResults(Ref ref) async {
         m.countryDisplay.toLowerCase().contains(q) ||
         (m.dj?.toLowerCase().contains(q) ?? false);
   }).toList();
+}
+
+// ── Search history (chips + tapped media catalog) ──────────────────────────────
+
+const _kRecentTermsKey = 'terms';
+const _kRecentMediaKey = 'media';
+const _kMaxRecentTerms = 10;
+const _kMaxRecentMedia = 12;
+
+List<String> _decodeList(String? raw) {
+  if (raw == null || raw.isEmpty) return const [];
+  return (jsonDecode(raw) as List).cast<String>();
+}
+
+/// Recently searched query strings, most-recent first. Backed by Hive box
+/// `recent_searches` under key `terms`. Powers the chip row on the search screen.
+@riverpod
+class RecentSearchTerms extends _$RecentSearchTerms {
+  Box<String> get _box => Hive.box<String>('recent_searches');
+
+  @override
+  List<String> build() => _decodeList(_box.get(_kRecentTermsKey));
+
+  void add(String term) {
+    final t = term.trim();
+    if (t.isEmpty) return;
+    final next = [t, ...state.where((e) => e.toLowerCase() != t.toLowerCase())].take(_kMaxRecentTerms).toList();
+    _box.put(_kRecentTermsKey, jsonEncode(next));
+    state = next;
+  }
+
+  void remove(String term) {
+    final next = state.where((e) => e != term).toList();
+    _box.put(_kRecentTermsKey, jsonEncode(next));
+    state = next;
+  }
+
+  void clear() {
+    _box.delete(_kRecentTermsKey);
+    state = const [];
+  }
+}
+
+/// Media IDs the user opened from search results, most-recent first. Backed by
+/// Hive box `recent_searches` under key `media`.
+@riverpod
+class RecentSearchMedia extends _$RecentSearchMedia {
+  Box<String> get _box => Hive.box<String>('recent_searches');
+
+  @override
+  List<String> build() => _decodeList(_box.get(_kRecentMediaKey));
+
+  void add(String id) {
+    final next = [id, ...state.where((e) => e != id)].take(_kMaxRecentMedia).toList();
+    _box.put(_kRecentMediaKey, jsonEncode(next));
+    state = next;
+  }
+
+  void clear() {
+    _box.delete(_kRecentMediaKey);
+    state = const [];
+  }
+}
+
+@riverpod
+Future<List<Media>> recentSearchContent(Ref ref) async {
+  final ids = ref.watch(recentSearchMediaProvider);
+  final list = await ref.watch(mediaProvider.future);
+  final byId = {for (final m in list) m.id: m};
+  return [for (final id in ids) if (byId[id] != null) byId[id]!];
 }
 
 // ── Library — saved ───────────────────────────────────────────────────────────
@@ -235,55 +325,42 @@ Future<List<(WatchedItem, Media)>> recentContent(Ref ref) async {
   return result;
 }
 
-// ── Library — downloads ───────────────────────────────────────────────────────
-
-@riverpod
-class Downloads extends _$Downloads {
-  Box<DownloadItem> get _box => Hive.box<DownloadItem>('downloads');
-
-  @override
-  List<DownloadItem> build() => _box.values.toList();
-
-  void add(String mediaId, {String quality = 'HD', String size = '—'}) {
-    final item = DownloadItem(contentId: mediaId, quality: quality, size: size, at: DateTime.now().toIso8601String());
-    _box.put(mediaId, item);
-    state = [item, ...state.where((d) => d.contentId != mediaId)];
-  }
-
-  void remove(String mediaId) {
-    _box.delete(mediaId);
-    state = state.where((d) => d.contentId != mediaId).toList();
-  }
-}
-
-@riverpod
-Future<List<(DownloadItem, Media)>> downloadsContent(Ref ref) async {
-  final dls = ref.watch(downloadsProvider);
-  final list = await ref.watch(mediaProvider.future);
-  final byId = {for (final m in list) m.id: m};
-  final result = <(DownloadItem, Media)>[];
-  for (final dl in dls) {
-    final media = byId[dl.contentId];
-    if (media != null) result.add((dl, media));
-  }
-  return result;
-}
+// ── Library — downloads: see downloads_notifier.dart (re-exported above) ─────
 
 // ── Requests ──────────────────────────────────────────────────────────────────
 
+/// Distinct DJ names pulled from the cached media catalog (Hive). Used to power
+/// the DJ autocomplete in the Agiza (requests) screen.
+@riverpod
+Future<List<String>> djNames(Ref ref) async {
+  final list = await ref.watch(mediaProvider.future);
+  final djs = list.map((m) => m.dj ?? '').where((d) => d.isNotEmpty).toSet().toList()
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return djs;
+}
+
 @riverpod
 class Requests extends _$Requests {
-  @override
-  List<ContentRequest> build() => [];
+  SupabaseClient get _db => Supabase.instance.client;
 
-  void add(String title, String note) {
-    final id = 'r${DateTime.now().millisecondsSinceEpoch}';
-    state = [ContentRequest(id: id, title: title, note: note, status: RequestStatus.pending, date: _today()), ...state];
+  @override
+  Future<List<ContentRequest>> build() async {
+    final rows = await _db.from('requests').select().order('created_at', ascending: false);
+    return (rows as List)
+        .map((e) => ContentRequest.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  String _today() {
-    final now = DateTime.now();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[now.month - 1]} ${now.day}';
+  /// Inserts a new request into Supabase and prepends it to the local list.
+  Future<void> submit({
+    required String title,
+    String note = '',
+    String? type,
+    String? dj,
+  }) async {
+    final draft = ContentRequest(id: '', title: title, note: note, type: type, dj: dj);
+    final inserted = await _db.from('requests').insert(draft.toInsert()).select().single();
+    final req = ContentRequest.fromJson(inserted);
+    state = AsyncData([req, ...?state.value]);
   }
 }

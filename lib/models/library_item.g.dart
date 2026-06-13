@@ -49,39 +49,51 @@ class WatchedItemAdapter extends TypeAdapter<WatchedItem> {
           typeId == other.typeId;
 }
 
-class DownloadItemAdapter extends TypeAdapter<DownloadItem> {
+class DownloadRecordAdapter extends TypeAdapter<DownloadRecord> {
   @override
-  final typeId = 1;
+  final typeId = 4;
 
   @override
-  DownloadItem read(BinaryReader reader) {
+  DownloadRecord read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return DownloadItem(
-      contentId: fields[0] as String,
-      quality: fields[1] == null ? 'HD' : fields[1] as String,
-      size: fields[2] == null ? '—' : fields[2] as String,
-      at: fields[3] as String,
-      context: fields[4] == null ? '' : fields[4] as String,
+    return DownloadRecord(
+      fileId: fields[0] as String,
+      mediaId: fields[1] as String,
+      label: fields[2] as String,
+      title: fields[3] as String,
+      url: fields[4] as String,
+      status: fields[5] == null ? 0 : (fields[5] as num).toInt(),
+      progress: fields[6] == null ? 0.0 : (fields[6] as num).toDouble(),
+      totalBytes: fields[7] == null ? 0 : (fields[7] as num).toInt(),
+      at: fields[8] as String,
     );
   }
 
   @override
-  void write(BinaryWriter writer, DownloadItem obj) {
+  void write(BinaryWriter writer, DownloadRecord obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(9)
       ..writeByte(0)
-      ..write(obj.contentId)
+      ..write(obj.fileId)
       ..writeByte(1)
-      ..write(obj.quality)
+      ..write(obj.mediaId)
       ..writeByte(2)
-      ..write(obj.size)
+      ..write(obj.label)
       ..writeByte(3)
-      ..write(obj.at)
+      ..write(obj.title)
       ..writeByte(4)
-      ..write(obj.context);
+      ..write(obj.url)
+      ..writeByte(5)
+      ..write(obj.status)
+      ..writeByte(6)
+      ..write(obj.progress)
+      ..writeByte(7)
+      ..write(obj.totalBytes)
+      ..writeByte(8)
+      ..write(obj.at);
   }
 
   @override
@@ -90,7 +102,7 @@ class DownloadItemAdapter extends TypeAdapter<DownloadItem> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is DownloadItemAdapter &&
+      other is DownloadRecordAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
