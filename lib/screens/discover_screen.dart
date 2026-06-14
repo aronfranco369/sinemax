@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/providers.dart';
@@ -69,9 +70,12 @@ class DiscoverScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.close_rounded, size: 14, color: SinemaxColors.red),
+                            const FaIcon(FontAwesomeIcons.xmark, size: 14, color: SinemaxColors.red),
                             const SizedBox(width: 4),
-                            Text('Clear filters', style: SinemaxTextStyles.body(13, color: SinemaxColors.red, weight: FontWeight.w500)),
+                            Text(
+                              'Clear filters',
+                              style: SinemaxTextStyles.body(13, color: SinemaxColors.red, weight: FontWeight.w500),
+                            ),
                           ],
                         ),
                       ),
@@ -150,7 +154,7 @@ class _DropdownChip extends StatelessWidget {
               style: SinemaxTextStyles.body(13, color: _active ? SinemaxColors.blue : SinemaxColors.muted, weight: _active ? FontWeight.w600 : FontWeight.w400),
             ),
             const SizedBox(width: 3),
-            Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _active ? SinemaxColors.blue : SinemaxColors.muted),
+            FaIcon(FontAwesomeIcons.chevronDown, size: 16, color: _active ? SinemaxColors.blue : SinemaxColors.muted),
           ],
         ),
       ),
@@ -209,7 +213,7 @@ class _PickerSheet extends StatelessWidget {
                 Text(title, style: SinemaxTextStyles.display(17, weight: FontWeight.w700)),
                 GestureDetector(
                   onTap: () => Navigator.of(context).pop(),
-                  child: const Icon(Icons.close_rounded, color: SinemaxColors.muted, size: 22),
+                  child: const FaIcon(FontAwesomeIcons.xmark, color: SinemaxColors.muted, size: 22),
                 ),
               ],
             ),
@@ -239,7 +243,7 @@ class _PickerSheet extends StatelessWidget {
                             style: SinemaxTextStyles.body(15, color: isSelected ? SinemaxColors.ink : SinemaxColors.muted, weight: isSelected ? FontWeight.w600 : FontWeight.w400),
                           ),
                         ),
-                        if (isSelected) const Icon(Icons.check_rounded, color: SinemaxColors.blue, size: 20),
+                        if (isSelected) const FaIcon(FontAwesomeIcons.check, color: SinemaxColors.blue, size: 20),
                       ],
                     ),
                   ),

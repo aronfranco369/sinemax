@@ -3,8 +3,8 @@
 // Check in to version control
 
 import 'package:hive_ce/hive_ce.dart';
-import 'package:kitabu/models/library_item.dart';
-import 'package:kitabu/models/media.dart';
+import 'package:sinemax/models/library_item.dart';
+import 'package:sinemax/models/media.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {

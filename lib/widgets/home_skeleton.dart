@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../theme/app_theme.dart';
@@ -41,7 +42,7 @@ class HomeTrendingSkeleton extends StatelessWidget {
                     // Star badge row
                     Row(
                       children: [
-                        const Icon(Icons.star_rounded, size: 13, color: SinemaxColors.gold),
+                        const FaIcon(FontAwesomeIcons.solidStar, size: 13, color: SinemaxColors.gold),
                         const SizedBox(width: 5),
                         Text(
                           'MOST WATCHED THIS WEEK',
@@ -75,7 +76,7 @@ class HomeTrendingSkeleton extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.play_arrow_rounded, size: 17),
+                              const FaIcon(FontAwesomeIcons.play, size: 17),
                               const SizedBox(width: 5),
                               Text('Watch', style: SinemaxTextStyles.body(13, weight: FontWeight.w700)),
                             ],
@@ -89,7 +90,7 @@ class HomeTrendingSkeleton extends StatelessWidget {
                             shape: BoxShape.circle,
                             color: SinemaxColors.panel2,
                           ),
-                          child: const Icon(Icons.bookmark_outline_rounded, size: 18),
+                          child: const FaIcon(FontAwesomeIcons.bookmark, size: 18),
                         ),
                       ],
                     ),

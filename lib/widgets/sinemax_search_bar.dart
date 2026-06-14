@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
-import 'sinemax_icon.dart';
 
 class SinemaxSearchBar extends StatelessWidget {
   const SinemaxSearchBar({super.key});
@@ -30,7 +30,7 @@ class SinemaxSearchBar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(color: SinemaxColors.blue, borderRadius: BorderRadius.circular(8)),
-            child: const SinemaxIcon('search', size: 20, color: Colors.white),
+            child: const FaIcon(FontAwesomeIcons.magnifyingGlass, size: 20, color: Colors.white),
           ),
         ),
       ],

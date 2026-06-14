@@ -6,7 +6,7 @@ import '../data/providers.dart';
 import '../models/media.dart';
 import '../theme/app_theme.dart';
 import '../widgets/poster_card.dart';
-import '../widgets/sinemax_icon.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -73,7 +73,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       backgroundColor: SinemaxColors.bg,
       appBar: AppBar(
         backgroundColor: SinemaxColors.bg,
-        leading: IconButton(icon: const SinemaxIcon('arrowL', size: 22), onPressed: () => context.pop()),
+        leading: IconButton(icon: const FaIcon(FontAwesomeIcons.arrowLeft, size: 22), onPressed: () => context.pop()),
         titleSpacing: 0,
         title: TextField(
           controller: _controller,
@@ -97,7 +97,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         actions: [
           if (query.isNotEmpty)
             IconButton(
-              icon: const SinemaxIcon('x', size: 20),
+              icon: const FaIcon(FontAwesomeIcons.xmark, size: 20),
               onPressed: () {
                 _controller.clear();
                 ref.read(searchQueryProvider.notifier).clear();
@@ -232,14 +232,14 @@ class _SearchChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SinemaxIcon('search', size: 13, color: SinemaxColors.muted),
+            const FaIcon(FontAwesomeIcons.magnifyingGlass, size: 13, color: SinemaxColors.muted),
             const SizedBox(width: 7),
             Text(label, style: SinemaxTextStyles.body(13.5, color: SinemaxColors.ink)),
             const SizedBox(width: 6),
             GestureDetector(
               onTap: onRemove,
               behavior: HitTestBehavior.opaque,
-              child: const SinemaxIcon('x', size: 13, color: SinemaxColors.muted2),
+              child: const FaIcon(FontAwesomeIcons.xmark, size: 13, color: SinemaxColors.muted2),
             ),
           ],
         ),
@@ -257,7 +257,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SinemaxIcon('search', size: 48, color: SinemaxColors.muted2),
+          const FaIcon(FontAwesomeIcons.magnifyingGlass, size: 48, color: SinemaxColors.muted2),
           const SizedBox(height: 16),
           Text('Search for movies & series', style: SinemaxTextStyles.body(16, color: SinemaxColors.muted)),
           const SizedBox(height: 6),
@@ -281,7 +281,7 @@ class _NoResults extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SinemaxIcon('search', size: 40, color: SinemaxColors.muted2),
+            const FaIcon(FontAwesomeIcons.magnifyingGlass, size: 40, color: SinemaxColors.muted2),
             const SizedBox(height: 16),
             Text(
               'Hatukupata "$query"',
@@ -326,7 +326,7 @@ class _NoResults extends StatelessWidget {
                         color: Colors.white.withAlpha(40),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Center(child: SinemaxIcon('send', size: 18, color: Colors.white)),
+                      child: const Center(child: FaIcon(FontAwesomeIcons.paperPlane, size: 18, color: Colors.white)),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -348,7 +348,7 @@ class _NoResults extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const SinemaxIcon('chevR', size: 18, color: Colors.white),
+                    const FaIcon(FontAwesomeIcons.chevronRight, size: 18, color: Colors.white),
                   ],
                 ),
               ),

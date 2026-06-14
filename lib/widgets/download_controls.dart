@@ -5,8 +5,9 @@ import '../data/download_engine.dart';
 import '../data/providers.dart';
 import '../models/library_item.dart';
 import '../models/media.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 import '../theme/app_theme.dart';
-import 'sinemax_icon.dart';
 
 // ── Detail screen: main "Download" action button ─────────────────────────────
 
@@ -22,7 +23,7 @@ class DownloadActionBtn extends ConsumerWidget {
     final rec = file == null ? null : ref.watch(downloadsProvider)[file!.id];
     final notifier = ref.read(downloadsProvider.notifier);
 
-    String icon = 'download';
+    FaIconData icon = FontAwesomeIcons.download;
     String label = 'Download';
     bool active = false;
     VoidCallback? onTap = file == null ? null : () => startDownload(context, ref, media, file!);
@@ -32,32 +33,32 @@ class DownloadActionBtn extends ConsumerWidget {
         break;
       case DownloadStatus.queued:
         label = 'Waiting…';
-        icon = 'clock';
+        icon = FontAwesomeIcons.clock;
         active = true;
         onTap = () => notifier.cancel(rec!.fileId);
       case DownloadStatus.running:
         label = '${(rec!.progress * 100).round()}%';
-        icon = 'pause';
+        icon = FontAwesomeIcons.pause;
         active = true;
         onTap = () => notifier.pause(rec.fileId);
       case DownloadStatus.paused:
         label = 'Resume ${(rec!.progress * 100).round()}%';
-        icon = 'play';
+        icon = FontAwesomeIcons.play;
         active = true;
         onTap = () => notifier.resume(rec.fileId);
       case DownloadStatus.encrypting:
         label = 'Saving…';
-        icon = 'gear';
+        icon = FontAwesomeIcons.gear;
         active = true;
         onTap = null;
       case DownloadStatus.completed:
         label = 'Downloaded';
-        icon = 'check';
+        icon = FontAwesomeIcons.check;
         active = true;
         onTap = () => confirmRemoveDownload(context, ref, rec!);
       case DownloadStatus.failed:
         label = 'Retry';
-        icon = 'download';
+        icon = FontAwesomeIcons.download;
         onTap = () => retryDownload(context, ref, rec!);
     }
 
@@ -90,7 +91,7 @@ class DownloadActionBtn extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SinemaxIcon(icon, size: 16, color: color),
+                    FaIcon(icon, size: 16, color: color),
                     const SizedBox(width: 6),
                     Text(
                       label,
@@ -123,17 +124,17 @@ class FileDownloadIcon extends ConsumerWidget {
     switch (rec?.statusEnum) {
       case null:
       case DownloadStatus.failed:
-        return _tap(() => rec == null ? startDownload(context, ref, media, file) : retryDownload(context, ref, rec), SinemaxIcon('download', size: 15, color: rec == null ? SinemaxColors.muted2 : SinemaxColors.red));
+        return _tap(() => rec == null ? startDownload(context, ref, media, file) : retryDownload(context, ref, rec), FaIcon(FontAwesomeIcons.download, size: 15, color: rec == null ? SinemaxColors.muted2 : SinemaxColors.red));
       case DownloadStatus.queued:
-        return _tap(() => notifier.cancel(rec!.fileId), _ring(null, 'x'));
+        return _tap(() => notifier.cancel(rec!.fileId), _ring(null, FontAwesomeIcons.xmark));
       case DownloadStatus.running:
-        return _tap(() => notifier.pause(rec!.fileId), _ring(rec!.progress, 'pause'));
+        return _tap(() => notifier.pause(rec!.fileId), _ring(rec!.progress, FontAwesomeIcons.pause));
       case DownloadStatus.paused:
-        return _tap(() => notifier.resume(rec!.fileId), _ring(rec!.progress, 'play', dim: true));
+        return _tap(() => notifier.resume(rec!.fileId), _ring(rec!.progress, FontAwesomeIcons.play, dim: true));
       case DownloadStatus.encrypting:
-        return _ring(null, 'gear');
+        return _ring(null, FontAwesomeIcons.gear);
       case DownloadStatus.completed:
-        return _tap(() => confirmRemoveDownload(context, ref, rec!), const SinemaxIcon('check', size: 16, color: SinemaxColors.teal));
+        return _tap(() => confirmRemoveDownload(context, ref, rec!), const FaIcon(FontAwesomeIcons.check, size: 16, color: SinemaxColors.teal));
     }
   }
 
@@ -143,7 +144,7 @@ class FileDownloadIcon extends ConsumerWidget {
     child: Padding(padding: const EdgeInsets.all(4), child: child),
   );
 
-  Widget _ring(double? progress, String icon, {bool dim = false}) {
+  Widget _ring(double? progress, FaIconData icon, {bool dim = false}) {
     final color = dim ? SinemaxColors.muted : SinemaxColors.blue;
     return SizedBox(
       width: 26,
@@ -152,7 +153,7 @@ class FileDownloadIcon extends ConsumerWidget {
         alignment: Alignment.center,
         children: [
           CircularProgressIndicator(value: progress, strokeWidth: 2, color: color, backgroundColor: SinemaxColors.line2),
-          SinemaxIcon(icon, size: 10, color: color),
+          FaIcon(icon, size: 10, color: color),
         ],
       ),
     );
@@ -231,7 +232,7 @@ class DownloadActionControls extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(downloadsProvider.notifier);
 
-    Widget btn(String icon, Color color, VoidCallback onTap) => GestureDetector(
+    Widget btn(FaIconData icon, Color color, VoidCallback onTap) => GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -243,22 +244,22 @@ class DownloadActionControls extends ConsumerWidget {
           shape: BoxShape.circle,
           border: Border.all(color: SinemaxColors.line, width: 0.5),
         ),
-        child: Center(child: SinemaxIcon(icon, size: 14, color: color)),
+        child: Center(child: FaIcon(icon, size: 14, color: color)),
       ),
     );
 
     final List<Widget> children = switch (record.statusEnum) {
-      DownloadStatus.queued => [btn('x', SinemaxColors.muted, () => notifier.cancel(record.fileId))],
-      DownloadStatus.running => [btn('pause', SinemaxColors.blue, () => notifier.pause(record.fileId)), btn('x', SinemaxColors.muted, () => notifier.cancel(record.fileId))],
-      DownloadStatus.paused => [btn('play', SinemaxColors.blue, () => notifier.resume(record.fileId)), btn('x', SinemaxColors.muted, () => notifier.cancel(record.fileId))],
+      DownloadStatus.queued => [btn(FontAwesomeIcons.xmark, SinemaxColors.muted, () => notifier.cancel(record.fileId))],
+      DownloadStatus.running => [btn(FontAwesomeIcons.pause, SinemaxColors.blue, () => notifier.pause(record.fileId)), btn(FontAwesomeIcons.xmark, SinemaxColors.muted, () => notifier.cancel(record.fileId))],
+      DownloadStatus.paused => [btn(FontAwesomeIcons.play, SinemaxColors.blue, () => notifier.resume(record.fileId)), btn(FontAwesomeIcons.xmark, SinemaxColors.muted, () => notifier.cancel(record.fileId))],
       DownloadStatus.encrypting => [
           const Padding(
             padding: EdgeInsets.only(left: 6),
             child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: SinemaxColors.blue)),
           ),
         ],
-      DownloadStatus.completed => [btn('trash', SinemaxColors.muted2, () => confirmRemoveDownload(context, ref, record))],
-      DownloadStatus.failed => [btn('download', SinemaxColors.blue, () => notifier.retry(record)), btn('trash', SinemaxColors.muted2, () => notifier.remove(record.fileId))],
+      DownloadStatus.completed => [btn(FontAwesomeIcons.trash, SinemaxColors.muted2, () => confirmRemoveDownload(context, ref, record))],
+      DownloadStatus.failed => [btn(FontAwesomeIcons.download, SinemaxColors.blue, () => notifier.retry(record)), btn(FontAwesomeIcons.trash, SinemaxColors.muted2, () => notifier.remove(record.fileId))],
     };
 
     return Row(mainAxisSize: MainAxisSize.min, children: children);

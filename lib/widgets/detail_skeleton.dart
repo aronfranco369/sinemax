@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 import '../theme/app_theme.dart';
 import 'action_btn.dart';
 import 'player_loading_view.dart';
-import 'sinemax_icon.dart';
 
 const _kEffect = ShimmerEffect(
   baseColor: Color(0xFF0E1D33),
@@ -42,7 +43,7 @@ class DetailSkeleton extends StatelessWidget {
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const SinemaxIcon('arrowL', size: 20),
+                  child: const FaIcon(FontAwesomeIcons.arrowLeft, size: 20),
                 ),
               ),
             ],
@@ -71,11 +72,11 @@ class DetailSkeleton extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(
               children: [
-                Expanded(child: ActionBtn(icon: 'download', label: 'Download')),
+                Expanded(child: ActionBtn(icon: FontAwesomeIcons.download, label: 'Download')),
                 const SizedBox(width: 8),
-                Expanded(child: ActionBtn(icon: 'bookmark', label: 'Save')),
+                Expanded(child: ActionBtn(icon: FontAwesomeIcons.bookmark, label: 'Save')),
                 const SizedBox(width: 8),
-                Expanded(child: ActionBtn(icon: 'send', label: 'Share')),
+                Expanded(child: ActionBtn(icon: FontAwesomeIcons.shareNodes, label: 'Share')),
               ],
             ),
           ),
@@ -261,7 +262,7 @@ class _EpHeader extends StatelessWidget {
               children: [
                 Text('Expand', style: SinemaxTextStyles.body(12, color: SinemaxColors.muted)),
                 const SizedBox(width: 4),
-                const SinemaxIcon('chevD', size: 13, color: SinemaxColors.muted),
+                const FaIcon(FontAwesomeIcons.chevronDown, size: 13, color: SinemaxColors.muted),
               ],
             ),
           ),

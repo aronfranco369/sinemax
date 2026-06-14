@@ -1,5 +1,6 @@
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../models/media.dart';
 import '../theme/app_theme.dart';
@@ -120,7 +121,7 @@ class _PosterFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: SinemaxColors.panel2,
-      child: Center(child: Icon(isSeries ? Icons.tv_rounded : Icons.movie_rounded, size: 32, color: SinemaxColors.muted2)),
+      child: Center(child: FaIcon(isSeries ? FontAwesomeIcons.tv : FontAwesomeIcons.film, size: 32, color: SinemaxColors.muted2)),
     );
   }
 }

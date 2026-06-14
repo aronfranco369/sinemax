@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../theme/app_theme.dart';
-import 'sinemax_icon.dart';
 
 class ActionBtn extends StatelessWidget {
-  final String icon;
+  final FaIconData icon;
   final String label;
   final bool active;
   final VoidCallback? onTap;
@@ -37,7 +37,7 @@ class ActionBtn extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SinemaxIcon(icon, size: 16, color: color),
+            FaIcon(icon, size: 16, color: color),
             const SizedBox(width: 6),
             Text(label,
                 style: SinemaxTextStyles.body(12,

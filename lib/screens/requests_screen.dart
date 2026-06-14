@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/providers.dart';
 import '../models/request.dart';
 import '../theme/app_theme.dart';
-import '../widgets/sinemax_icon.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class RequestsScreen extends ConsumerStatefulWidget {
   const RequestsScreen({super.key});
@@ -13,25 +13,253 @@ class RequestsScreen extends ConsumerStatefulWidget {
 }
 
 class _RequestsScreenState extends ConsumerState<RequestsScreen> {
+  bool _sheetOpen = false; // guards against opening two sheets at once
+
+  @override
+  void initState() {
+    super.initState();
+    // A title forwarded from a no-result search should open the composer
+    // pre-filled, as soon as this screen is mounted.
+    final pending = ref.read(pendingRequestTitleProvider)?.trim();
+    if (pending != null && pending.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openComposer(prefill: pending);
+        ref.read(pendingRequestTitleProvider.notifier).clear();
+      });
+    }
+  }
+
+  Future<void> _openComposer({String? prefill}) async {
+    if (_sheetOpen) return;
+    setState(() => _sheetOpen = true);
+    final sent = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withAlpha(140),
+      builder: (_) => _OrderSheet(initialTitle: prefill),
+    );
+    if (mounted) setState(() => _sheetOpen = false);
+    if (sent == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: SinemaxColors.panel,
+          content: Row(
+            children: [
+              const FaIcon(FontAwesomeIcons.check, size: 18, color: SinemaxColors.teal),
+              const SizedBox(width: 10),
+              Text('Ombi limetumwa!',
+                  style: SinemaxTextStyles.body(14,
+                      weight: FontWeight.w600, color: SinemaxColors.teal)),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final requestsAsync = ref.watch(requestsProvider);
+
+    // Repeat forwards from search arrive while this tab is kept alive in the
+    // IndexedStack, so initState won't re-run — react to the provider instead.
+    ref.listen(pendingRequestTitleProvider, (_, next) {
+      final t = next?.trim();
+      if (t != null && t.isNotEmpty) {
+        _openComposer(prefill: t);
+        ref.read(pendingRequestTitleProvider.notifier).clear();
+      }
+    });
+
+    return Scaffold(
+      backgroundColor: SinemaxColors.bg,
+      appBar: AppBar(
+        backgroundColor: SinemaxColors.bg,
+        title: Text('Maombi', style: SinemaxTextStyles.display(22, weight: FontWeight.w700)),
+      ),
+      // The orders feed is the whole screen; ordering is a compose overlay.
+      floatingActionButton: _ComposeFab(onTap: () => _openComposer()),
+      body: RefreshIndicator(
+        color: SinemaxColors.blue,
+        backgroundColor: SinemaxColors.panel,
+        onRefresh: () => ref.refresh(requestsProvider.future),
+        child: requestsAsync.when(
+          loading: () => const Center(
+              child: CircularProgressIndicator(color: SinemaxColors.blue)),
+          error: (e, _) => ListView(
+            // ListView keeps pull-to-refresh working in the error state.
+            children: [
+              const SizedBox(height: 120),
+              Center(
+                child: Text('Could not load requests.',
+                    style: SinemaxTextStyles.body(13, color: SinemaxColors.muted)),
+              ),
+            ],
+          ),
+          data: (requests) {
+            if (requests.isEmpty) {
+              return _EmptyFeed(onCompose: () => _openComposer());
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              itemCount: requests.length + 1,
+              itemBuilder: (context, i) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _ComposePrompt(onTap: () => _openComposer()),
+                  );
+                }
+                return _RequestCard(request: requests[i - 1]);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Tappable "compose" prompt pinned to the top of the feed — the primary way
+/// to start an order without stealing half the screen.
+class _ComposePrompt extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ComposePrompt({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [SinemaxColors.blue.withAlpha(38), SinemaxColors.panel],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: SinemaxColors.blue.withAlpha(90), width: 0.6),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: SinemaxColors.blue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(
+                child: FaIcon(FontAwesomeIcons.penToSquare, size: 18, color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Agiza filamu au series',
+                      style: SinemaxTextStyles.body(14, weight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text('Hupati unachotafuta? Tujulishe.',
+                      style: SinemaxTextStyles.body(12, color: SinemaxColors.muted)),
+                ],
+              ),
+            ),
+            const FaIcon(FontAwesomeIcons.chevronRight,
+                size: 14, color: SinemaxColors.muted2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating "order" button — always reachable while scrolling the feed.
+class _ComposeFab extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ComposeFab({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: onTap,
+      backgroundColor: SinemaxColors.blue,
+      foregroundColor: Colors.white,
+      icon: const FaIcon(FontAwesomeIcons.penToSquare, size: 16, color: Colors.white),
+      label: Text('Agiza',
+          style: SinemaxTextStyles.body(14, weight: FontWeight.w700, color: Colors.white)),
+    );
+  }
+}
+
+class _EmptyFeed extends StatelessWidget {
+  final VoidCallback onCompose;
+  const _EmptyFeed({required this.onCompose});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      children: [
+        _ComposePrompt(onTap: onCompose),
+        const SizedBox(height: 48),
+        Center(
+          child: FaIcon(FontAwesomeIcons.inbox, size: 40, color: SinemaxColors.muted2),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Text('Hakuna maombi bado.',
+              style: SinemaxTextStyles.body(14, color: SinemaxColors.muted)),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text('Kuwa wa kwanza kuagiza.',
+              style: SinemaxTextStyles.body(12, color: SinemaxColors.muted2)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bottom-sheet composer. Owns the form controllers and submit logic so the
+/// feed screen stays purely about browsing orders.
+class _OrderSheet extends ConsumerStatefulWidget {
+  final String? initialTitle;
+  const _OrderSheet({this.initialTitle});
+
+  @override
+  ConsumerState<_OrderSheet> createState() => _OrderSheetState();
+}
+
+class _OrderSheetState extends ConsumerState<_OrderSheet> {
   final _titleCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _djCtrl = TextEditingController();
 
   String _type = 'movie'; // 'movie' | 'series'
-  bool _submitted = false;
   bool _sending = false;
+
+  // Required fields: type (always set), DJ, and title. Notes stay optional.
+  bool get _canSubmit =>
+      _titleCtrl.text.trim().isNotEmpty && _djCtrl.text.trim().isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    // Consume any pending prefill (e.g. forwarded from a no-result search).
-    final pending = ref.read(pendingRequestTitleProvider)?.trim();
-    if (pending != null && pending.isNotEmpty) {
-      _titleCtrl.text = pending;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) ref.read(pendingRequestTitleProvider.notifier).clear();
-      });
-    }
+    final t = widget.initialTitle?.trim();
+    if (t != null && t.isNotEmpty) _titleCtrl.text = t;
+    // Re-evaluate the submit guard as the required fields change.
+    _titleCtrl.addListener(_onFieldChanged);
+    _djCtrl.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -44,7 +272,7 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
 
   Future<void> _submit() async {
     final title = _titleCtrl.text.trim();
-    if (title.isEmpty || _sending) return;
+    if (!_canSubmit || _sending) return;
     FocusScope.of(context).unfocus();
 
     // Re-probe connectivity; requests need an internet connection.
@@ -56,7 +284,7 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
           backgroundColor: SinemaxColors.panel,
           content: Row(
             children: [
-              const Icon(Icons.wifi_off_rounded, color: SinemaxColors.red, size: 18),
+              const FaIcon(FontAwesomeIcons.triangleExclamation, color: SinemaxColors.red, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -80,15 +308,10 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
             dj: _djCtrl.text.trim(),
           );
       if (!mounted) return;
-      _titleCtrl.clear();
-      _noteCtrl.clear();
-      _djCtrl.clear();
-      setState(() => _submitted = true);
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _submitted = false);
-      });
+      Navigator.of(context).pop(true); // parent shows the confirmation
     } catch (e) {
       if (!mounted) return;
+      setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: SinemaxColors.panel,
@@ -96,100 +319,69 @@ class _RequestsScreenState extends ConsumerState<RequestsScreen> {
               style: SinemaxTextStyles.body(13, color: SinemaxColors.red)),
         ),
       );
-    } finally {
-      if (mounted) setState(() => _sending = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final requestsAsync = ref.watch(requestsProvider);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    // Repeat forwards from search arrive while this tab is kept alive in the
-    // IndexedStack, so initState won't re-run — react to the provider instead.
-    ref.listen(pendingRequestTitleProvider, (_, next) {
-      final t = next?.trim();
-      if (t != null && t.isNotEmpty) {
-        _titleCtrl.text = t;
-        ref.read(pendingRequestTitleProvider.notifier).clear();
-      }
-    });
-
-    return Scaffold(
-      backgroundColor: SinemaxColors.bg,
-      appBar: AppBar(
-        backgroundColor: SinemaxColors.bg,
-        title: Text('Agiza', style: SinemaxTextStyles.display(22, weight: FontWeight.w700)),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Top 60% — request form ──────────────────────────────────────
-          Expanded(
-            flex: 6,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-              child: _RequestForm(
-                titleCtrl: _titleCtrl,
-                noteCtrl: _noteCtrl,
-                djCtrl: _djCtrl,
-                type: _type,
-                onTypeChanged: (v) => setState(() => _type = v),
-                submitted: _submitted,
-                sending: _sending,
-                onSubmit: _submit,
-              ),
-            ),
-          ),
-
-          const Divider(height: 1, thickness: 0.5),
-
-          // ── Bottom 40% — requests from Supabase ─────────────────────────
-          Expanded(
-            flex: 4,
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: SinemaxColors.bg2,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-                  child: Text('Maombi ya Hivi Karibuni',
-                      style: SinemaxTextStyles.display(16, weight: FontWeight.w700)),
-                ),
-                Expanded(
-                  child: requestsAsync.when(
-                    loading: () => const Center(
-                        child: CircularProgressIndicator(color: SinemaxColors.blue)),
-                    error: (e, _) => Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text('Could not load requests.',
-                            style: SinemaxTextStyles.body(13, color: SinemaxColors.muted)),
-                      ),
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: SinemaxColors.line2,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    data: (requests) {
-                      if (requests.isEmpty) {
-                        return Center(
-                          child: Text('No requests yet.',
-                              style: SinemaxTextStyles.body(13, color: SinemaxColors.muted2)),
-                        );
-                      }
-                      return RefreshIndicator(
-                        color: SinemaxColors.blue,
-                        backgroundColor: SinemaxColors.panel,
-                        onRefresh: () => ref.refresh(requestsProvider.future),
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          itemCount: requests.length,
-                          itemBuilder: (context, i) => _RequestCard(request: requests[i]),
-                        ),
-                      );
-                    },
                   ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Agiza Filamu / Series',
+                          style: SinemaxTextStyles.display(18, weight: FontWeight.w700)),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).maybePop(),
+                      child: const FaIcon(FontAwesomeIcons.xmark,
+                          size: 22, color: SinemaxColors.muted2),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _RequestForm(
+                  titleCtrl: _titleCtrl,
+                  noteCtrl: _noteCtrl,
+                  djCtrl: _djCtrl,
+                  type: _type,
+                  onTypeChanged: (v) => setState(() => _type = v),
+                  submitted: false,
+                  sending: _sending,
+                  canSubmit: _canSubmit,
+                  onSubmit: _submit,
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -203,6 +395,7 @@ class _RequestForm extends ConsumerWidget {
   final ValueChanged<String> onTypeChanged;
   final bool submitted;
   final bool sending;
+  final bool canSubmit;
   final VoidCallback onSubmit;
 
   const _RequestForm({
@@ -213,6 +406,7 @@ class _RequestForm extends ConsumerWidget {
     required this.onTypeChanged,
     required this.submitted,
     required this.sending,
+    required this.canSubmit,
     required this.onSubmit,
   });
 
@@ -236,7 +430,7 @@ class _RequestForm extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FieldLabel('Aina'),
+                  _FieldLabel('Aina', required: true),
                   _TypeDropdown(value: type, onChanged: onTypeChanged),
                 ],
               ),
@@ -247,7 +441,7 @@ class _RequestForm extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _FieldLabel('DJ'),
+                  _FieldLabel('DJ', required: true),
                   _DjAutocomplete(controller: djCtrl, options: djs),
                 ],
               ),
@@ -257,16 +451,16 @@ class _RequestForm extends ConsumerWidget {
         const SizedBox(height: 10),
 
         // Title
-        _FieldLabel('Jina la Filamu / Series'),
-        _InputField(controller: titleCtrl, hint: 'Andika jina...', icon: 'edit'),
+        _FieldLabel('Jina la Filamu / Series', required: true),
+        _InputField(controller: titleCtrl, hint: 'Andika jina...', icon: FontAwesomeIcons.penToSquare),
         const SizedBox(height: 10),
 
         // Extra details
-        _FieldLabel('Maelezo ya Ziada'),
+        _FieldLabel('Maelezo ya Ziada (hiari)'),
         _InputField(
           controller: noteCtrl,
           hint: 'Mwaka, lugha, msimu, n.k...',
-          icon: 'list',
+          icon: FontAwesomeIcons.listUl,
           maxLines: 2,
         ),
         const SizedBox(height: 12),
@@ -279,12 +473,17 @@ class _RequestForm extends ConsumerWidget {
               : SizedBox(
                   width: double.infinity,
                   child: GestureDetector(
-                    onTap: onSubmit,
+                    onTap: canSubmit ? onSubmit : null,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: sending ? SinemaxColors.blueDeep : SinemaxColors.blue,
+                        color: !canSubmit
+                            ? SinemaxColors.panel2
+                            : (sending ? SinemaxColors.blueDeep : SinemaxColors.blue),
                         borderRadius: BorderRadius.circular(10),
+                        border: !canSubmit
+                            ? Border.all(color: SinemaxColors.line, width: 0.5)
+                            : null,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -296,12 +495,15 @@ class _RequestForm extends ConsumerWidget {
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           else
-                            const SinemaxIcon('send', size: 16, color: Colors.white),
+                            FaIcon(FontAwesomeIcons.paperPlane,
+                                size: 16,
+                                color: canSubmit ? Colors.white : SinemaxColors.muted2),
                           const SizedBox(width: 8),
                           Text(
                             sending ? 'Inatuma...' : 'Tuma Ombi',
                             style: SinemaxTextStyles.body(15,
-                                weight: FontWeight.w600, color: Colors.white),
+                                weight: FontWeight.w600,
+                                color: canSubmit ? Colors.white : SinemaxColors.muted2),
                           ),
                         ],
                       ),
@@ -316,14 +518,29 @@ class _RequestForm extends ConsumerWidget {
 
 class _FieldLabel extends StatelessWidget {
   final String text;
-  const _FieldLabel(this.text);
+  final bool required;
+  const _FieldLabel(this.text, {this.required = false});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
-      child: Text(text,
-          style: SinemaxTextStyles.body(12, weight: FontWeight.w600, color: SinemaxColors.muted)),
+      child: Text.rich(
+        TextSpan(
+          text: text,
+          style: SinemaxTextStyles.body(12,
+              weight: FontWeight.w600, color: SinemaxColors.muted),
+          children: required
+              ? [
+                  TextSpan(
+                    text: ' *',
+                    style: SinemaxTextStyles.body(12,
+                        weight: FontWeight.w600, color: SinemaxColors.red),
+                  ),
+                ]
+              : null,
+        ),
+      ),
     );
   }
 }
@@ -344,7 +561,7 @@ class _TypeDropdown extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SinemaxIcon(value == 'series' ? 'inbox' : 'play', size: 18, color: SinemaxColors.muted2),
+          FaIcon(value == 'series' ? FontAwesomeIcons.inbox : FontAwesomeIcons.play, size: 18, color: SinemaxColors.muted2),
           const SizedBox(width: 10),
           Expanded(
             child: DropdownButtonHideUnderline(
@@ -352,7 +569,7 @@ class _TypeDropdown extends StatelessWidget {
                 value: value,
                 isExpanded: true,
                 dropdownColor: SinemaxColors.panel,
-                icon: const Icon(Icons.keyboard_arrow_down, color: SinemaxColors.muted2),
+                icon: const FaIcon(FontAwesomeIcons.chevronDown, color: SinemaxColors.muted2),
                 style: SinemaxTextStyles.body(14, color: SinemaxColors.ink),
                 items: const [
                   DropdownMenuItem(value: 'movie', child: Text('Movie')),
@@ -400,7 +617,7 @@ class _DjAutocomplete extends StatelessWidget {
             children: [
               const Padding(
                 padding: EdgeInsets.only(left: 14),
-                child: SinemaxIcon('user', size: 18, color: SinemaxColors.muted2),
+                child: FaIcon(FontAwesomeIcons.user, size: 18, color: SinemaxColors.muted2),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -448,7 +665,7 @@ class _DjAutocomplete extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       child: Row(
                         children: [
-                          const SinemaxIcon('user', size: 14, color: SinemaxColors.muted2),
+                          const FaIcon(FontAwesomeIcons.user, size: 14, color: SinemaxColors.muted2),
                           const SizedBox(width: 10),
                           Expanded(child: Text(dj, style: SinemaxTextStyles.body(14))),
                         ],
@@ -468,7 +685,7 @@ class _DjAutocomplete extends StatelessWidget {
 class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
-  final String icon;
+  final FaIconData icon;
   final int maxLines;
 
   const _InputField({
@@ -491,7 +708,7 @@ class _InputField extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.only(left: 14, top: maxLines > 1 ? 14 : 0),
-            child: SinemaxIcon(icon, size: 18, color: SinemaxColors.muted2),
+            child: FaIcon(icon, size: 18, color: SinemaxColors.muted2),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -529,7 +746,7 @@ class _SuccessBanner extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SinemaxIcon('check', size: 18, color: SinemaxColors.teal),
+          const FaIcon(FontAwesomeIcons.check, size: 18, color: SinemaxColors.teal),
           const SizedBox(width: 8),
           Text(
             'Ombi limetumwa!',
@@ -572,7 +789,7 @@ class _RequestCard extends StatelessWidget {
                     ],
                     if (request.dj != null && request.dj!.isNotEmpty)
                       Flexible(
-                        child: _MetaChip(request.dj!, icon: 'user'),
+                        child: _MetaChip(request.dj!, icon: FontAwesomeIcons.user),
                       ),
                   ],
                 ),
@@ -625,7 +842,7 @@ class _RequestCard extends StatelessWidget {
 
 class _MetaChip extends StatelessWidget {
   final String text;
-  final String? icon;
+  final FaIconData? icon;
   const _MetaChip(this.text, {this.icon});
 
   @override
@@ -641,7 +858,7 @@ class _MetaChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            SinemaxIcon(icon!, size: 11, color: SinemaxColors.muted2),
+            FaIcon(icon!, size: 11, color: SinemaxColors.muted2),
             const SizedBox(width: 4),
           ],
           Flexible(

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../theme/app_theme.dart';
-import 'sinemax_icon.dart';
 
-const _navItems = [(label: 'Home', icon: 'home'), (label: 'Discover', icon: 'compass'), (label: 'Requests', icon: 'inbox'), (label: 'Downloads', icon: 'download'), (label: 'Profile', icon: 'user')];
+const _navItems = [
+  (label: 'Home', icon: FontAwesomeIcons.house),
+  (label: 'Discover', icon: FontAwesomeIcons.compass),
+  (label: 'Requests', icon: FontAwesomeIcons.inbox),
+  (label: 'Downloads', icon: FontAwesomeIcons.download),
+  (label: 'Profile', icon: FontAwesomeIcons.user),
+];
 
 class SinemaxBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -43,7 +49,7 @@ class SinemaxBottomNav extends StatelessWidget {
                         margin: const EdgeInsets.only(bottom: 6),
                         decoration: BoxDecoration(color: SinemaxColors.blue, borderRadius: BorderRadius.circular(1)),
                       ),
-                      SinemaxIcon(active ? '${item.icon}-filled' : item.icon, size: 22, color: color),
+                      FaIcon(item.icon, size: 20, color: color),
                       const SizedBox(height: 3),
                       Text(
                         item.label,

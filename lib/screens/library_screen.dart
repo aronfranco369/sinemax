@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image_ce/cached_network_image.dart';
+import 'package:disk_space_plus/disk_space_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +11,7 @@ import '../models/library_item.dart';
 import '../models/media.dart';
 import '../theme/app_theme.dart';
 import '../widgets/download_controls.dart';
-import '../widgets/sinemax_icon.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 /// Offline downloads, styled after a mobile "My Files" manager:
 /// an underline tab bar (All / Movies / Series), then rich rows whose
@@ -25,6 +28,99 @@ class LibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
+  int _section = 0; // 0 = Downloads, 1 = History, 2 = Saved
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: SinemaxColors.bg,
+      appBar: AppBar(
+        backgroundColor: SinemaxColors.bg,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text('Library', style: SinemaxTextStyles.display(22, weight: FontWeight.w700)),
+      ),
+      body: Column(
+        children: [
+          _SectionSelector(index: _section, onChanged: (i) => setState(() => _section = i)),
+          Expanded(
+            child: IndexedStack(
+              index: _section,
+              children: const [
+                _DownloadsView(),
+                _HistoryView(),
+                _SavedView(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Top-level section selector: Downloads · History · Saved ───────────────────
+
+class _SectionSelector extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onChanged;
+  const _SectionSelector({required this.index, required this.onChanged});
+
+  static const _labels = ['Downloads', 'History', 'Saved'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: SinemaxColors.panel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: SinemaxColors.line, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < _labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: i == index ? SinemaxColors.blue : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _labels[i],
+                      style: SinemaxTextStyles.body(
+                        13.5,
+                        weight: i == index ? FontWeight.w700 : FontWeight.w600,
+                        color: i == index ? Colors.white : SinemaxColors.muted,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Downloads section (unchanged UI, just extracted) ──────────────────────────
+
+class _DownloadsView extends ConsumerStatefulWidget {
+  const _DownloadsView();
+
+  @override
+  ConsumerState<_DownloadsView> createState() => _DownloadsViewState();
+}
+
+class _DownloadsViewState extends ConsumerState<_DownloadsView> {
   int _tab = 0; // 0 = All, 1 = Movies, 2 = Series
 
   bool _isSeries(Media media, List<DownloadRecord> recs) => media.isSeries || recs.length > 1;
@@ -33,54 +129,276 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget build(BuildContext context) {
     final dlAsync = ref.watch(downloadsContentProvider);
 
-    return Scaffold(
-      backgroundColor: SinemaxColors.bg,
-      appBar: AppBar(
-        backgroundColor: SinemaxColors.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text('Downloads', style: SinemaxTextStyles.display(22, weight: FontWeight.w700)),
-      ),
-      body: dlAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const _Empty(message: 'Couldn\'t load downloads'),
-        data: (groups) {
-          // ── Derive the three views from the grouped records ──
-          final all = <(Media, DownloadRecord)>[];
-          final movies = <(Media, DownloadRecord)>[];
-          final series = <(Media, List<DownloadRecord>)>[];
-          for (final (media, recs) in groups) {
-            for (final r in recs) {
-              all.add((media, r));
-            }
-            if (_isSeries(media, recs)) {
-              series.add((media, recs));
-            } else {
-              movies.add((media, recs.first));
-            }
+    return dlAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => const _Empty(message: 'Couldn\'t load downloads'),
+      data: (groups) {
+        // ── Derive the three views from the grouped records ──
+        final all = <(Media, DownloadRecord)>[];
+        final movies = <(Media, DownloadRecord)>[];
+        final series = <(Media, List<DownloadRecord>)>[];
+        for (final (media, recs) in groups) {
+          for (final r in recs) {
+            all.add((media, r));
           }
-          all.sort((a, b) => b.$2.at.compareTo(a.$2.at)); // newest first
+          if (_isSeries(media, recs)) {
+            series.add((media, recs));
+          } else {
+            movies.add((media, recs.first));
+          }
+        }
+        all.sort((a, b) => b.$2.at.compareTo(a.$2.at)); // newest first
 
-          return Column(
-            children: [
-              _Tabs(
+        return Column(
+          children: [
+            _Tabs(
+              index: _tab,
+              onChanged: (i) => setState(() => _tab = i),
+              counts: [all.length, movies.length, series.length],
+            ),
+            Expanded(
+              child: IndexedStack(
                 index: _tab,
-                onChanged: (i) => setState(() => _tab = i),
-                counts: [all.length, movies.length, series.length],
+                children: [
+                  _AllTab(groups: groups, items: all),
+                  _MoviesTab(items: movies),
+                  _SeriesTab(groups: series),
+                ],
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── History section ───────────────────────────────────────────────────────────
+
+class _HistoryView extends ConsumerWidget {
+  const _HistoryView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(recentContentProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => const _Empty(icon: FontAwesomeIcons.clock, message: 'Couldn\'t load history'),
+      data: (items) {
+        if (items.isEmpty) {
+          return const _Empty(
+            icon: FontAwesomeIcons.clock,
+            message: 'No watch history yet',
+            subtitle: 'Movies and series you watch show up here, so you can pick up where you left off.',
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+          children: [for (final (watched, media) in items) _HistoryCard(media: media, watched: watched)],
+        );
+      },
+    );
+  }
+}
+
+/// History row — mirrors the Downloads `_FileCard` layout: poster thumb,
+/// title + meta, trailing action. Here the meta is when it was watched and the
+/// trailing action is a play affordance.
+class _HistoryCard extends StatelessWidget {
+  final Media media;
+  final WatchedItem watched;
+  const _HistoryCard({required this.media, required this.watched});
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = watched.progress.clamp(0.0, 1.0);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: SinemaxColors.panel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SinemaxColors.line, width: 0.5),
+      ),
+      child: GestureDetector(
+        onTap: () => context.push('/detail/${media.id}?autoplay=1'),
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Thumb(media: media, badge: media.isSeries ? 'SERIES' : 'MOVIE', completed: true),
+              const SizedBox(width: 12),
               Expanded(
-                child: IndexedStack(
-                  index: _tab,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _AllTab(groups: groups, items: all),
-                    _MoviesTab(items: movies),
-                    _SeriesTab(groups: series),
+                    Text(
+                      media.title,
+                      style: SinemaxTextStyles.display(15.5, weight: FontWeight.w700),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      progress > 0.02 ? 'Watched ${(progress * 100).round()}% · ${fmtDate(watched.watchedAt)}' : 'Watched · ${fmtDate(watched.watchedAt)}',
+                      style: SinemaxTextStyles.body(11.5, color: SinemaxColors.muted2),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (progress > 0.02) ...[
+                      const SizedBox(height: 7),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: SinemaxColors.line2,
+                          color: SinemaxColors.blue,
+                          minHeight: 3,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              _PlayCircle(onTap: () => context.push('/detail/${media.id}?autoplay=1')),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Saved section ─────────────────────────────────────────────────────────────
+
+class _SavedView extends ConsumerWidget {
+  const _SavedView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(savedContentProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => const _Empty(icon: FontAwesomeIcons.bookmark, message: 'Couldn\'t load saved'),
+      data: (items) {
+        if (items.isEmpty) {
+          return const _Empty(
+            icon: FontAwesomeIcons.bookmark,
+            message: 'Nothing saved yet',
+            subtitle: 'Tap Save on any movie or series and it will be waiting for you here.',
           );
-        },
+        }
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+          children: [for (final media in items) _SavedCard(media: media)],
+        );
+      },
+    );
+  }
+}
+
+/// Saved row — mirrors the Downloads `_FileCard` layout: poster thumb,
+/// title + meta, trailing action. The trailing action un-saves the title.
+class _SavedCard extends ConsumerWidget {
+  final Media media;
+  const _SavedCard({required this.media});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final meta = [
+      if (media.year != null) '${media.year}',
+      if (media.countryDisplay.isNotEmpty) media.countryDisplay,
+      if (media.genres.isNotEmpty) media.genres.first,
+    ].join('  ·  ');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: SinemaxColors.panel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: SinemaxColors.line, width: 0.5),
+      ),
+      child: GestureDetector(
+        onTap: () => context.push('/detail/${media.id}?autoplay=1'),
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Thumb(media: media, badge: media.isSeries ? 'SERIES' : 'MOVIE'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      media.title,
+                      style: SinemaxTextStyles.display(15.5, weight: FontWeight.w700),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        meta,
+                        style: SinemaxTextStyles.body(11.5, color: SinemaxColors.muted2),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (media.djDisplay.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        media.djDisplay,
+                        style: SinemaxTextStyles.body(11.5, weight: FontWeight.w500, color: SinemaxColors.muted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => ref.read(savedProvider.notifier).toggle(media.id),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: SinemaxColors.panel2,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: SinemaxColors.line, width: 0.5),
+                  ),
+                  child: const Center(child: FaIcon(FontAwesomeIcons.solidBookmark, size: 15, color: SinemaxColors.blue)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Round play button used as the trailing affordance on History rows.
+class _PlayCircle extends StatelessWidget {
+  final VoidCallback onTap;
+  const _PlayCircle({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: const BoxDecoration(color: SinemaxColors.blue, shape: BoxShape.circle),
+        child: const Center(child: FaIcon(FontAwesomeIcons.play, size: 14, color: Colors.white)),
       ),
     );
   }
@@ -171,7 +489,7 @@ class _AllTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
       children: [
-        _StorageHeader(groups: groups),
+        const _StorageHeader(),
         const SizedBox(height: 18),
         for (final (media, rec) in items) _FileCard(media: media, record: rec),
       ],
@@ -229,7 +547,8 @@ class _FileCard extends StatelessWidget {
         border: Border.all(color: SinemaxColors.line, width: 0.5),
       ),
       child: GestureDetector(
-        onTap: () => context.push('/detail/${media.id}'),
+        // Deep-link straight onto this exact file (e.g. episode 2), not the first.
+        onTap: () => context.push('/detail/${media.id}?autoplay=1&file=${record.fileId}'),
         behavior: HitTestBehavior.opaque,
         child: Padding(
           padding: const EdgeInsets.all(10),
@@ -322,7 +641,7 @@ class _SeriesGroupState extends State<_SeriesGroup> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.push('/detail/${media.id}'),
+                    onTap: () => context.push('/detail/${media.id}?autoplay=1'),
                     child: _Thumb(media: media, badge: 'SERIES'),
                   ),
                   const SizedBox(width: 12),
@@ -361,7 +680,7 @@ class _SeriesGroupState extends State<_SeriesGroup> {
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: const SinemaxIcon('chevD', size: 18, color: SinemaxColors.muted2),
+                    child: const FaIcon(FontAwesomeIcons.chevronDown, size: 18, color: SinemaxColors.muted2),
                   ),
                 ],
               ),
@@ -486,7 +805,7 @@ class _Thumb extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
                   ),
-                  child: const Center(child: SinemaxIcon('play', size: 12, color: Colors.white)),
+                  child: const Center(child: FaIcon(FontAwesomeIcons.play, size: 12, color: Colors.white)),
                 ),
               ),
             if (badge != null)
@@ -519,7 +838,7 @@ class _ThumbFallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ColoredBox(
       color: SinemaxColors.panel2,
-      child: Center(child: SinemaxIcon('play', size: 20, color: SinemaxColors.muted2)),
+      child: Center(child: FaIcon(FontAwesomeIcons.play, size: 20, color: SinemaxColors.muted2)),
     );
   }
 }
@@ -577,23 +896,47 @@ class _MetaLine extends StatelessWidget {
 
 // ── Storage summary (All tab header) ──────────────────────────────────────────
 
-class _StorageHeader extends StatelessWidget {
-  final List<(Media, List<DownloadRecord>)> groups;
-  const _StorageHeader({required this.groups});
+/// Device storage summary — total used vs. free on the volume that holds the
+/// app's downloads. Reads live figures from the platform via disk_space_plus.
+class _StorageHeader extends StatefulWidget {
+  const _StorageHeader();
+
+  @override
+  State<_StorageHeader> createState() => _StorageHeaderState();
+}
+
+class _StorageHeaderState extends State<_StorageHeader> {
+  int? _totalBytes;
+  int? _freeBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final disk = DiskSpacePlus();
+      final totalMb = await disk.getTotalDiskSpace;
+      final freeMb = await disk.getFreeDiskSpace;
+      if (!mounted) return;
+      setState(() {
+        _totalBytes = totalMb == null ? null : (totalMb * 1024 * 1024).round();
+        _freeBytes = freeMb == null ? null : (freeMb * 1024 * 1024).round();
+      });
+    } catch (_) {
+      // Leave figures null — the header renders a neutral "Storage" state.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    var titles = groups.length;
-    var files = 0;
-    var bytes = 0;
-    var active = 0;
-    for (final (_, records) in groups) {
-      files += records.length;
-      for (final r in records) {
-        if (r.isCompleted) bytes += r.totalBytes;
-        if (r.isActive) active++;
-      }
-    }
+    final total = _totalBytes;
+    final free = _freeBytes;
+    final hasData = total != null && total > 0 && free != null;
+    final used = hasData ? math.max(0, total - free) : null;
+    final usedFraction = hasData ? (used! / total).clamp(0.0, 1.0) : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -614,7 +957,7 @@ class _StorageHeader extends StatelessWidget {
                   gradient: const LinearGradient(colors: [SinemaxColors.blue, SinemaxColors.blueBright]),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: const Center(child: SinemaxIcon('download', size: 22, color: Colors.white)),
+                child: const Center(child: FaIcon(FontAwesomeIcons.download, size: 22, color: Colors.white)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -622,13 +965,12 @@ class _StorageHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      bytes > 0 ? fmtBytes(bytes) : 'On this device',
+                      used != null ? '${fmtBytes(used)} used' : 'Storage',
                       style: SinemaxTextStyles.display(24, weight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$titles ${titles == 1 ? 'title' : 'titles'} · $files ${files == 1 ? 'file' : 'files'}'
-                      '${active > 0 ? ' · $active in progress' : ''}',
+                      hasData ? '${fmtBytes(free)} free of ${fmtBytes(total)}' : 'Calculating device storage…',
                       style: SinemaxTextStyles.body(12, color: SinemaxColors.muted),
                     ),
                   ],
@@ -637,27 +979,25 @@ class _StorageHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
+          // Used (blue) vs. free (track) on this device.
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
-            child: Container(
+            child: SizedBox(
               height: 5,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [SinemaxColors.blue, SinemaxColors.blueBright]),
+              child: Stack(
+                children: [
+                  const Positioned.fill(child: ColoredBox(color: SinemaxColors.line2)),
+                  FractionallySizedBox(
+                    widthFactor: usedFraction,
+                    child: const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [SinemaxColors.blue, SinemaxColors.blueBright]),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const SinemaxIcon('check', size: 13, color: SinemaxColors.teal),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Encrypted and stored on this device — plays offline, stays private.',
-                  style: SinemaxTextStyles.body(11, color: SinemaxColors.muted2),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -667,7 +1007,13 @@ class _StorageHeader extends StatelessWidget {
 
 class _Empty extends StatelessWidget {
   final String message;
-  const _Empty({required this.message});
+  final FaIconData icon;
+  final String subtitle;
+  const _Empty({
+    required this.message,
+    this.icon = FontAwesomeIcons.download,
+    this.subtitle = 'Movies and series you download appear here — ready to watch offline, anywhere.',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -685,13 +1031,13 @@ class _Empty extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: SinemaxColors.line, width: 0.5),
               ),
-              child: const Center(child: SinemaxIcon('download', size: 32, color: SinemaxColors.muted2)),
+              child: Center(child: FaIcon(icon, size: 32, color: SinemaxColors.muted2)),
             ),
             const SizedBox(height: 18),
             Text(message, style: SinemaxTextStyles.display(18, weight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'Movies and series you download appear here — ready to watch offline, anywhere.',
+              subtitle,
               textAlign: TextAlign.center,
               style: SinemaxTextStyles.body(12.5, color: SinemaxColors.muted2),
             ),

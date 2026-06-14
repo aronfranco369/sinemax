@@ -12,7 +12,7 @@ When the user explicitly passes an update prompt (e.g. "update the md"), **direc
 
 **Sinemax** — a streaming app for translated (dubbed) movies & series by Tanzanian DJs.
 Flutter app, dark theme, Supabase backend, Hive for local persistence.
-Flutter package name is `kitabu`; display name is `SINEMAX`.
+Flutter package name is `sinemax`; display name is `SINEMAX`.
 
 ---
 

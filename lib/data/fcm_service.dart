@@ -104,6 +104,6 @@ class FcmService {
 
   static void _navigateToMedia(String? mediaId) {
     if (mediaId == null || mediaId.isEmpty) return;
-    appRouter.push('/detail/$mediaId');
+    appRouter.push('/detail/$mediaId?autoplay=1');
   }
 }

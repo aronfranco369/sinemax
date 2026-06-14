@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.aronfranco" "\0"
-            VALUE "FileDescription", "kitabu" "\0"
+            VALUE "FileDescription", "Sinemax" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "kitabu" "\0"
+            VALUE "InternalName", "Sinemax" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.aronfranco. All rights reserved." "\0"
-            VALUE "OriginalFilename", "kitabu.exe" "\0"
-            VALUE "ProductName", "kitabu" "\0"
+            VALUE "OriginalFilename", "sinemax.exe" "\0"
+            VALUE "ProductName", "Sinemax" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

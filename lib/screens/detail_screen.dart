@@ -18,11 +18,22 @@ import '../widgets/info_chip.dart';
 import '../widgets/offline_banner.dart';
 import '../widgets/player_loading_view.dart';
 import '../widgets/poster_card.dart';
-import '../widgets/sinemax_icon.dart';
+import '../widgets/ripple_play_button.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class DetailScreen extends ConsumerStatefulWidget {
   final String contentId;
-  const DetailScreen({super.key, required this.contentId});
+
+  /// Start playing immediately on open (set when arriving from library /
+  /// history / saved / downloads / a notification). Browse surfaces leave it
+  /// false so the idle ripple play button is shown instead.
+  final bool autoplay;
+
+  /// Optional MediaFile id to play instead of the first file — lets a Downloads
+  /// row open straight onto, say, episode 2.
+  final String? fileId;
+
+  const DetailScreen({super.key, required this.contentId, this.autoplay = false, this.fileId});
 
   @override
   ConsumerState<DetailScreen> createState() => _DetailScreenState();
@@ -31,6 +42,10 @@ class DetailScreen extends ConsumerStatefulWidget {
 class _DetailScreenState extends ConsumerState<DetailScreen> {
   VideoPlayerController? _vpc;
   ChewieController? _cc;
+  // False until the user taps the ripple play button (or autoplay/deep-link
+  // kicks in). While false the idle poster + ripple play button is shown and
+  // nothing has been loaded.
+  bool _started = false;
   bool _playerReady = false;
   bool _playerFailed = false;
   // Non-null when playback failed for a reason other than connectivity
@@ -44,21 +59,56 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAndInitPlayer());
+    // Autoplay only when we were sent here to play something (library, history,
+    // saved, downloads, notification). Otherwise wait for the user to tap play.
+    if (widget.autoplay) {
+      _started = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadAndInitPlayer());
+    } else if (widget.fileId != null) {
+      // Deep-linked to a specific file but not autoplaying — preselect it so the
+      // now-playing label and episode highlight point at the right one.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _preselectDeepLinkedFile());
+    }
+  }
+
+  /// Resolves [DetailScreen.fileId] to its index once files are loaded, without
+  /// starting playback. No-op when no file was deep-linked.
+  Future<void> _preselectDeepLinkedFile() async {
+    if (!mounted || widget.fileId == null) return;
+    final files = await ref.read(mediaFilesProvider(widget.contentId).future);
+    final i = files.indexWhere((f) => f.id == widget.fileId);
+    if (i >= 0 && mounted) setState(() => _activeFileIndex = i);
+  }
+
+  /// User tapped the idle ripple play button — begin playback of the current
+  /// (possibly deep-linked) file.
+  void _startPlayback() {
+    if (_started) return;
+    setState(() => _started = true);
+    _loadAndInitPlayer();
   }
 
   Future<void> _loadAndInitPlayer() async {
     if (!mounted) return;
     try {
       final files = await ref.read(mediaFilesProvider(widget.contentId).future);
-      if (files.isNotEmpty) debugPrint('[Sinemax] Playing file size: ${files.first.fileSize} bytes (${files.first.sizeDisplay})');
-      final url = files.isNotEmpty ? await _resolvePlayUrl(files.first) : null;
+      // Honour a deep-linked file id; otherwise keep the current selection.
+      if (widget.fileId != null) {
+        final i = files.indexWhere((f) => f.id == widget.fileId);
+        if (i >= 0) _activeFileIndex = i;
+      }
+      final index = _activeFileIndex.clamp(0, files.isEmpty ? 0 : files.length - 1);
+      final file = index < files.length ? files[index] : null;
+      if (file != null) debugPrint('[Sinemax] Playing file size: ${file.fileSize} bytes (${file.sizeDisplay})');
+      final url = file != null ? await _resolvePlayUrl(file) : null;
       if (url == null) {
         _showPlayerError('Video hii bado haijapatikana');
         return;
       }
       debugPrint('[Sinemax] Playing URL: $url');
       await _initPlayer(url);
+      // Record this title in watch history (powers Library → History).
+      if (mounted) ref.read(recentProvider.notifier).markWatched(widget.contentId);
       // TODO: [DO NOT TOUCH] After player initializes, increment view_count on Supabase for widget.contentId.
       // Use: supabase.rpc('increment_view_count', params: {'media_id': widget.contentId}) or a direct UPDATE.
       // TODO: [DO NOT TOUCH] After player initializes, restore saved playback position for the first file
@@ -94,6 +144,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     // TODO: [DO NOT TOUCH] Before disposing _vpc, save current playback position to Hive.
     // Key: '${widget.contentId}_$_activeFileIndex', value: _vpc?.value.position (Duration → microseconds).
     setState(() {
+      _started = true;
       _playerReady = false;
       _playerFailed = false;
       _playerError = null;
@@ -221,7 +272,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                         color: SinemaxColors.panel,
                         child: OfflineNotice(
                           compact: true,
-                          icon: _playerError == null ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+                          icon: _playerError == null ? FontAwesomeIcons.triangleExclamation : FontAwesomeIcons.circleExclamation,
                           title: _playerError == null ? 'Unganisha intaneti kuonesha hii video' : 'Imeshindwa kucheza video',
                           message: _playerError ?? '',
                           onRetry: () {
@@ -233,6 +284,9 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                           },
                         ),
                       )
+                    : !_started
+                    // Idle: poster + ripple play button — tap to start.
+                    ? PlayerIdleView(posterUrl: media.posterUrl, onPlay: _startPlayback)
                     : PlayerLoadingView(posterUrl: media.posterUrl),
               ),
               Positioned(
@@ -243,7 +297,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                    child: const SinemaxIcon('arrowL', size: 20),
+                    child: const FaIcon(FontAwesomeIcons.arrowLeft, size: 20),
                   ),
                 ),
               ),
@@ -283,11 +337,16 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ActionBtn(icon: saved ? 'bookmark-filled' : 'bookmark', label: 'Save', active: saved, onTap: () => ref.read(savedProvider.notifier).toggle(media.id)),
+                  child: ActionBtn(
+                    icon: saved ? FontAwesomeIcons.solidBookmark : FontAwesomeIcons.bookmark,
+                    label: 'Save',
+                    active: saved,
+                    onTap: () => ref.read(savedProvider.notifier).toggle(media.id),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: ActionBtn(icon: 'send', label: 'Share'),
+                  child: ActionBtn(icon: FontAwesomeIcons.shareNodes, label: 'Share'),
                 ),
               ],
             ),
@@ -313,6 +372,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                             spacing: 8,
                             runSpacing: 6,
                             children: [
+                              // Media type — leads the row, blue-tinted so it reads at a glance.
+                              InfoChip(label: media.isSeries ? 'Series' : 'Movie', accent: true),
                               if (media.djDisplay.isNotEmpty) InfoChip(label: media.djDisplay),
                               if (media.year != null) InfoChip(label: '${media.year}'),
                               if (media.countryDisplay.isNotEmpty) InfoChip(label: media.countryDisplay),
@@ -375,7 +436,15 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                   if (hasFiles && _episodesExpanded) ...[
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, i) => _FileRow(file: files[i], media: media, index: i, posterUrl: media.posterUrl, isActive: i == _activeFileIndex, onTap: () => _switchToFile(files[i], i)),
+                        (context, i) => _FileRow(
+                          file: files[i],
+                          media: media,
+                          index: i,
+                          posterUrl: media.posterUrl,
+                          isActive: i == _activeFileIndex,
+                          isPlaying: i == _activeFileIndex && _started,
+                          onTap: () => _switchToFile(files[i], i),
+                        ),
                         childCount: files.length,
                       ),
                     ),
@@ -430,7 +499,7 @@ class _EpisodesHeader extends StatelessWidget {
                   const SizedBox(width: 4),
                   Transform.rotate(
                     angle: expanded ? pi : 0,
-                    child: const SinemaxIcon('chevD', size: 13, color: SinemaxColors.muted),
+                    child: const FaIcon(FontAwesomeIcons.chevronDown, size: 13, color: SinemaxColors.muted),
                   ),
                 ],
               ),
@@ -495,7 +564,7 @@ class _FileCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(color: isActive ? SinemaxColors.blue.withValues(alpha: 0.9) : Colors.black45, shape: BoxShape.circle),
-                      child: const SinemaxIcon('play', size: 16),
+                      child: const FaIcon(FontAwesomeIcons.play, size: 16),
                     ),
                     const SizedBox(height: 6),
                     Padding(
@@ -541,8 +610,12 @@ class _FileRow extends StatelessWidget {
   final int index;
   final String? posterUrl;
   final bool isActive;
+
+  /// True for the episode currently loaded in the player — shows the animated
+  /// ripple indicator in place of the static play button.
+  final bool isPlaying;
   final VoidCallback? onTap;
-  const _FileRow({required this.file, required this.media, required this.index, this.posterUrl, this.isActive = false, this.onTap});
+  const _FileRow({required this.file, required this.media, required this.index, this.posterUrl, this.isActive = false, this.isPlaying = false, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -627,17 +700,21 @@ class _FileRow extends StatelessWidget {
                     // download control — idle / progress ring / done
                     FileDownloadIcon(media: media, file: file),
                     const SizedBox(width: 12),
-                    // play circle — filled when active
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isActive ? SinemaxColors.blue : SinemaxColors.blue.withValues(alpha: 0.15),
-                        border: Border.all(color: SinemaxColors.blue.withValues(alpha: isActive ? 1.0 : 0.6), width: 1.0),
+                    // now-playing ripple when this row is the one in the player;
+                    // otherwise a static play circle (filled when active).
+                    if (isPlaying)
+                      const SizedBox(width: 44, height: 44, child: Center(child: RipplePlayButton(size: 6, maxRingScale: 1.7)))
+                    else
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isActive ? SinemaxColors.blue : SinemaxColors.blue.withValues(alpha: 0.15),
+                          border: Border.all(color: SinemaxColors.blue.withValues(alpha: isActive ? 1.0 : 0.6), width: 1.0),
+                        ),
+                        child: Center(child: FaIcon(FontAwesomeIcons.play, size: 13, color: isActive ? SinemaxColors.ink : SinemaxColors.blue)),
                       ),
-                      child: Center(child: SinemaxIcon('play', size: 13, color: isActive ? SinemaxColors.ink : SinemaxColors.blue)),
-                    ),
                   ],
                 ),
               ),

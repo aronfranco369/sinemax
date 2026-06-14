@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image_ce/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/providers.dart';
@@ -73,10 +74,7 @@ class HomeScreen extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.only(top: 48),
-                        child: OfflineNotice(
-                          message: 'Connect to the internet to load the catalog for the first time.',
-                          onRetry: () => ref.invalidate(mediaProvider),
-                        ),
+                        child: OfflineNotice(message: 'Connect to the internet to load the catalog for the first time.', onRetry: () => ref.invalidate(mediaProvider)),
                       ),
                     ),
                   ]
@@ -261,7 +259,7 @@ class _TrendingCard extends ConsumerWidget {
                   // Label
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 13, color: SinemaxColors.gold),
+                      const FaIcon(FontAwesomeIcons.solidStar, size: 13, color: SinemaxColors.gold),
                       const SizedBox(width: 5),
                       Text(
                         'MOST WATCHED THIS WEEK',
@@ -273,7 +271,7 @@ class _TrendingCard extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.remove_red_eye_outlined, size: 12, color: SinemaxColors.muted),
+                        FaIcon(FontAwesomeIcons.eye, size: 12, color: SinemaxColors.muted),
                         const SizedBox(width: 4),
                         Text(
                           _fmtCount(media.viewCount),
@@ -310,7 +308,7 @@ class _TrendingCard extends ConsumerWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.play_arrow_rounded, size: 17, color: Colors.white),
+                              const FaIcon(FontAwesomeIcons.play, size: 17, color: Colors.white),
                               const SizedBox(width: 5),
                               Text(
                                 'Watch',
@@ -331,7 +329,7 @@ class _TrendingCard extends ConsumerWidget {
                             border: Border.all(color: isSaved ? SinemaxColors.teal : SinemaxColors.line2, width: 1.5),
                             color: Colors.black26,
                           ),
-                          child: Icon(isSaved ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded, size: 18, color: isSaved ? SinemaxColors.teal : Colors.white),
+                          child: FaIcon(isSaved ? FontAwesomeIcons.solidBookmark : FontAwesomeIcons.bookmark, size: 18, color: isSaved ? SinemaxColors.teal : Colors.white),
                         ),
                       ),
                     ],

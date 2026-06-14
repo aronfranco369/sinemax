@@ -2,7 +2,7 @@
 
 **SINEMAX** is a streaming app for translated (dubbed) movies & series by Tanzanian DJs. It's a Flutter application with a dark theme, a Supabase backend, and Hive for local persistence and offline playback.
 
-> The Flutter package name is `kitabu`; the display name is **SINEMAX**.
+> The Flutter package name is `sinemax`; the display name is **SINEMAX**.
 
 ---
 

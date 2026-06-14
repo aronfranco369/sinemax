@@ -21,7 +21,15 @@ final appRouter = GoRouter(
     GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
     GoRoute(
       path: '/detail/:id',
-      builder: (_, state) => DetailScreen(contentId: state.pathParameters['id']!),
+      builder: (_, state) => DetailScreen(
+        contentId: state.pathParameters['id']!,
+        // When arriving from a "play this" surface (library, history, saved,
+        // downloads, notification) we autoplay; browse surfaces leave the
+        // player idle behind the ripple play button. `file` deep-links a
+        // specific episode/part by its MediaFile id.
+        autoplay: state.uri.queryParameters['autoplay'] == '1',
+        fileId: state.uri.queryParameters['file'],
+      ),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, shell) => _AppShell(shell: shell),
