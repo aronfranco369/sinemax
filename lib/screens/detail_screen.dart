@@ -1,12 +1,12 @@
 import 'dart:math' show pi;
 
 import 'package:cached_network_image_ce/cached_network_image.dart';
-import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:media_kit/media_kit.dart' as mk;
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:readmore/readmore.dart';
-import 'package:video_player/video_player.dart';
 
 import '../data/providers.dart';
 import '../models/media.dart';
@@ -40,8 +40,8 @@ class DetailScreen extends ConsumerStatefulWidget {
 }
 
 class _DetailScreenState extends ConsumerState<DetailScreen> {
-  VideoPlayerController? _vpc;
-  ChewieController? _cc;
+  mk.Player? _player;
+  VideoController? _controller;
   // False until the user taps the ripple play button (or autoplay/deep-link
   // kicks in). While false the idle poster + ripple play button is shown and
   // nothing has been loaded.
@@ -91,16 +91,30 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   Future<void> _loadAndInitPlayer() async {
     if (!mounted) return;
     try {
-      final files = await ref.read(mediaFilesProvider(widget.contentId).future);
-      // Honour a deep-linked file id; otherwise keep the current selection.
-      if (widget.fileId != null) {
-        final i = files.indexWhere((f) => f.id == widget.fileId);
-        if (i >= 0) _activeFileIndex = i;
+      // The catalog files list can be unavailable offline (never cached). Don't
+      // let that block a title that's already downloaded — fall back to an empty
+      // list and resolve playback straight from the download record below.
+      List<MediaFile> files;
+      try {
+        files = await ref.read(mediaFilesProvider(widget.contentId).future);
+      } catch (_) {
+        files = const [];
       }
-      final index = _activeFileIndex.clamp(0, files.isEmpty ? 0 : files.length - 1);
-      final file = index < files.length ? files[index] : null;
-      if (file != null) debugPrint('[Sinemax] Playing file size: ${file.fileSize} bytes (${file.sizeDisplay})');
-      final url = file != null ? await _resolvePlayUrl(file) : null;
+      String? url;
+      if (files.isNotEmpty) {
+        // Honour a deep-linked file id; otherwise keep the current selection.
+        if (widget.fileId != null) {
+          final i = files.indexWhere((f) => f.id == widget.fileId);
+          if (i >= 0) _activeFileIndex = i;
+        }
+        final index = _activeFileIndex.clamp(0, files.length - 1);
+        final file = files[index];
+        debugPrint('[Sinemax] Playing file size: ${file.fileSize} bytes (${file.sizeDisplay})');
+        url = await _resolvePlayUrl(file);
+      } else {
+        // No catalog files — only an offline copy can play here.
+        url = await _resolveOfflineUrl();
+      }
       if (url == null) {
         _showPlayerError('Video hii bado haijapatikana');
         return;
@@ -116,6 +130,22 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     } catch (e, st) {
       await _handlePlayerError(e, st);
     }
+  }
+
+  /// Resolve a playable local path purely from download records — used when the
+  /// catalog files list isn't available (offline + uncached). `playbackUrl`
+  /// only needs the fileId, which the record already carries. Prefers a
+  /// deep-linked file id, else the first completed download for this title.
+  Future<String?> _resolveOfflineUrl() async {
+    if (widget.fileId != null) {
+      return DownloadEngine.instance.playbackUrl(widget.fileId!);
+    }
+    for (final rec in ref.read(downloadsProvider).values) {
+      if (rec.mediaId == widget.contentId && rec.isCompleted) {
+        return DownloadEngine.instance.playbackUrl(rec.fileId);
+      }
+    }
+    return null;
   }
 
   /// Decides whether a playback failure is a connectivity problem or a real
@@ -150,10 +180,9 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
       _playerError = null;
       _activeFileIndex = index;
     });
-    _cc?.dispose();
-    _vpc?.dispose();
-    _cc = null;
-    _vpc = null;
+    _player?.dispose();
+    _player = null;
+    _controller = null;
     try {
       final url = await _resolvePlayUrl(file);
       if (url == null) {
@@ -180,24 +209,29 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   Future<void> _initPlayer(String url) async {
     _currentUrl = url;
     debugPrint('[Sinemax] NOW PLAYING URL: $url');
-    _vpc = VideoPlayerController.networkUrl(Uri.parse(url));
-    await _vpc!.initialize();
-    _cc = ChewieController(
-      videoPlayerController: _vpc!,
-      autoPlay: true,
-      looping: false,
-      aspectRatio: 16 / 9,
-      materialProgressColors: ChewieProgressColors(playedColor: SinemaxColors.blue, handleColor: SinemaxColors.blue, backgroundColor: SinemaxColors.line2, bufferedColor: SinemaxColors.line2),
-    );
-    if (mounted) setState(() => _playerReady = true);
+    // Drop any previous player before building a new one (guards the
+    // tap-A-then-B race when switching episodes quickly).
+    _player?.dispose();
+    final player = mk.Player();
+    final controller = VideoController(player);
+    _player = player;
+    _controller = controller;
+    // Playback errors (bad codec, server rejection, mid-stream drop) surface
+    // here rather than throwing — route them through the same handler.
+    player.stream.error.listen((e) {
+      if (mounted && identical(_player, player)) _handlePlayerError(e, StackTrace.current);
+    });
+    // `Media` accepts both a remote URL and a local file path; libmpv probes
+    // the container/codec itself, so any downloaded file type plays.
+    await player.open(mk.Media(url)); // autoplays by default
+    if (mounted && identical(_player, player)) setState(() => _playerReady = true);
   }
 
   @override
   void dispose() {
     // TODO: [DO NOT TOUCH] Save current playback position before leaving the screen.
     // Key: '${widget.contentId}_$_activeFileIndex', value: _vpc?.value.position (Duration → microseconds).
-    _cc?.dispose();
-    _vpc?.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -265,8 +299,11 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
             children: [
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: _playerReady && _cc != null
-                    ? Chewie(controller: _cc!)
+                child: _playerReady && _controller != null
+                    // media_kit's default controls show a buffering spinner
+                    // (instead of a stuck play button) whenever the stream
+                    // stalls on an unstable connection.
+                    ? Video(controller: _controller!)
                     : _playerFailed
                     ? ColoredBox(
                         color: SinemaxColors.panel,
@@ -287,7 +324,11 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                     : !_started
                     // Idle: poster + ripple play button — tap to start.
                     ? PlayerIdleView(posterUrl: media.posterUrl, onPlay: _startPlayback)
-                    : PlayerLoadingView(posterUrl: media.posterUrl),
+                    // TEMP: loader UI disabled so we can observe how the player
+                    // itself handles the URL (buffering/init) with no overlay
+                    // masking it. Restore PlayerLoadingView later.
+                    // : PlayerLoadingView(posterUrl: media.posterUrl),
+                    : const ColoredBox(color: Colors.black),
               ),
               Positioned(
                 top: topPad + 8,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/adapters.dart';
+import 'package:media_kit/media_kit.dart' show MediaKit;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'data/download_engine.dart';
@@ -16,6 +17,7 @@ Future<void> _onBackgroundMessage(RemoteMessage message) async {}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   FirebaseMessaging.onBackgroundMessage(_onBackgroundMessage);
 
   await dotenv.load(fileName: '.env');
@@ -38,7 +40,7 @@ Future<void> main() async {
     Hive.openBox<String>('recent_searches'),
   ]);
 
-  // Offline downloads: notifications, task tracking, AES key, reconcile state.
+  // Offline downloads: notifications, task tracking, reconcile state.
   await DownloadEngine.instance.init();
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
